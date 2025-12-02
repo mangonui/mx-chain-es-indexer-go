@@ -188,7 +188,7 @@ func (ei *elasticProcessor) createIndices(indexTemplateMap map[string]*bytes.Buf
 		}
 
 		indexWithSuffix := fmt.Sprintf("%s-%s", index, elasticIndexer.IndexSuffix)
-		err = ei.elasticClient.CheckAndCreateIndex(index)
+		err = ei.elasticClient.CheckAndCreateIndex(indexWithSuffix)
 		if err != nil {
 			return fmt.Errorf("elasticClient.CheckAndCreateIndex index: %s, error: %w", index, err)
 		}

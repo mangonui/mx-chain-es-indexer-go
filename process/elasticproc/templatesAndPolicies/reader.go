@@ -48,7 +48,6 @@ func (tr *templatesAndPolicyReader) GetElasticTemplatesAndPolicies() (map[string
 	indexPolicies := make(map[string]*bytes.Buffer)
 	indexTemplates := make(map[string]*bytes.Buffer)
 
-	indexTemplates["opendistro"] = indices.OpenDistro.ToBuffer()
 	indexTemplates[indexer.TransactionsIndex] = indices.Transactions.ToBuffer()
 	indexTemplates[indexer.BlockIndex] = indices.Blocks.ToBuffer()
 	indexTemplates[indexer.MiniblocksIndex] = indices.Miniblocks.ToBuffer()
