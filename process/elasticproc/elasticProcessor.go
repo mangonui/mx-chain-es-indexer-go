@@ -120,22 +120,17 @@ func NewElasticProcessor(arguments *ArgElasticProcessor) (*elasticProcessor, err
 
 // TODO move all the index create part in a new component
 func (ei *elasticProcessor) init() error {
-	indexTemplates, _, err := ei.mappingsHandler.GetElasticTemplatesAndPolicies()
+	indexTemplates, indexPolices, err := ei.mappingsHandler.GetElasticTemplatesAndPolicies()
 	if err != nil {
 		return err
 	}
 
-	err = ei.createIndexTemplates(indexTemplates)
+	err = ei.createIndices(indexTemplates)
 	if err != nil {
 		return err
 	}
 
-	err = ei.createIndexes()
-	if err != nil {
-		return err
-	}
-
-	err = ei.createAliases()
+	err = ei.createPolicies(indexPolices)
 	if err != nil {
 		return err
 	}
@@ -185,49 +180,50 @@ func (ei *elasticProcessor) indexVersion(version string) error {
 	return ei.elasticClient.DoBulkRequest(context.Background(), buffSlice.Buffers()[0], "")
 }
 
-func (ei *elasticProcessor) createIndexTemplates(indexTemplates map[string]*bytes.Buffer) error {
-	for _, index := range indexes {
-		indexTemplate := getTemplateByName(index, indexTemplates)
-		if indexTemplate != nil {
-			err := ei.elasticClient.CheckAndCreateTemplate(index, indexTemplate)
-			if err != nil {
-				return fmt.Errorf("index: %s, error: %w", index, err)
-			}
-		}
-	}
-	return nil
-}
-
-func (ei *elasticProcessor) createIndexes() error {
-
-	for _, index := range indexes {
-		indexName := fmt.Sprintf("%s-%s", index, elasticIndexer.IndexSuffix)
-		err := ei.elasticClient.CheckAndCreateIndex(indexName)
+func (ei *elasticProcessor) createIndices(indexTemplateMap map[string]*bytes.Buffer) error {
+	for index, indexData := range indexTemplateMap {
+		err := ei.elasticClient.CheckAndCreateTemplate(index, indexData)
 		if err != nil {
-			return fmt.Errorf("index: %s, error: %w", index, err)
+			return fmt.Errorf("elasticClient.CreateIndexWithMapping index: %s, error: %w", index, err)
 		}
-	}
-	return nil
-}
 
-func (ei *elasticProcessor) createAliases() error {
-	for _, index := range indexes {
-		indexName := fmt.Sprintf("%s-%s", index, elasticIndexer.IndexSuffix)
-		err := ei.elasticClient.CheckAndCreateAlias(index, indexName)
+		indexWithSuffix := fmt.Sprintf("%s-%s", index, elasticIndexer.IndexSuffix)
+		err = ei.elasticClient.CheckAndCreateIndex(index)
 		if err != nil {
-			return err
+			return fmt.Errorf("elasticClient.CheckAndCreateIndex index: %s, error: %w", index, err)
+		}
+
+		err = ei.elasticClient.CheckAndCreateAlias(index, indexWithSuffix)
+		if err != nil {
+			return fmt.Errorf("elasticClient.CheckAndCreateAlias index: %s, error: %w", index, err)
 		}
 	}
 
 	return nil
 }
 
-func getTemplateByName(templateName string, templateList map[string]*bytes.Buffer) *bytes.Buffer {
-	if template, ok := templateList[templateName]; ok {
-		return template
+func (ei *elasticProcessor) createPolicies(indexPolicyMap map[string]*bytes.Buffer) error {
+	for index, policy := range indexPolicyMap {
+		policyName := fmt.Sprintf("%s-%s", index, "policy")
+		if ei.elasticClient.PolicyExists(policyName) {
+			continue
+		}
+
+		indexWithSuffix := fmt.Sprintf("%s-%s", index, elasticIndexer.IndexSuffix)
+		err := ei.elasticClient.SetWriteIndexTrue(index, indexWithSuffix)
+		if err != nil {
+			return fmt.Errorf("elasticClient.SetWriteIndexTrue index: %s, error: %w", index, err)
+		}
+		log.Info("elasticClient.SetWriteIndexTrue", "index", index)
+
+		err = ei.elasticClient.CheckAndCreatePolicy(policyName, policy)
+		if err != nil {
+			return fmt.Errorf("databaseClient.PutPolicy index: %s, error: %w", index, err)
+		}
+
+		log.Info("databaseClient.PutPolicy", "index", index)
 	}
 
-	log.Debug("elasticProcessor.getTemplateByName", "could not find template", templateName)
 	return nil
 }
 

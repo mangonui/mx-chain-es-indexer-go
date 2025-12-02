@@ -4,6 +4,12 @@
         "receipts", "scresults", "accountsesdt", "accountsesdthistory", "epochinfo", "scdeploys", "tokens", "tags",
         "logs", "delegators", "operations", "esdts", "values", "events", "executionresults"
     ]
+    use-templates-from-files = true
+    [config.policies]
+        enable = false
+        indices-with-policy = ["rating", "transactions", "blocks", "validators", "miniblocks", "rounds", "accounts",
+            "accountshistory", "receipts", "scresults", "accountsesdt", "accountsesdthistory", "epochinfo",
+            "scdeploys", "tokens", "tags", "logs", "delegators", "operations", "esdts", "events"]
     [config.address-converter]
         length = 32
         type = "bech32"

@@ -29,7 +29,6 @@ var log = logger.GetOrCreate("indexer/factory")
 // new instances
 type ArgsIndexerFactory struct {
 	Enabled                  bool
-	UseKibana                bool
 	ImportDB                 bool
 	Denomination             int
 	BulkRequestMaxSize       int
@@ -40,6 +39,7 @@ type ArgsIndexerFactory struct {
 	TemplatesPath            string
 	Version                  string
 	EnabledIndexes           []string
+	IndicesWithPolicy        []string
 	HeaderMarshaller         marshal.Marshalizer
 	Marshalizer              marshal.Marshalizer
 	Hasher                   hashing.Hasher
@@ -47,6 +47,8 @@ type ArgsIndexerFactory struct {
 	ValidatorPubkeyConverter core.PubkeyConverter
 	StatusMetrics            indexerCore.StatusMetricsHandler
 	EnableEpochsConfig       config.EnableEpochsConfig
+	UseTemplatesFromFiles    bool
+	ConfigPath               string
 }
 
 // NewIndexer will create a new instance of Indexer
@@ -93,7 +95,6 @@ func createElasticProcessor(args ArgsIndexerFactory) (dataindexer.ElasticProcess
 		Hasher:                   args.Hasher,
 		AddressPubkeyConverter:   args.AddressPubkeyConverter,
 		ValidatorPubkeyConverter: args.ValidatorPubkeyConverter,
-		UseKibana:                args.UseKibana,
 		DBClient:                 databaseClient,
 		Denomination:             args.Denomination,
 		EnabledIndexes:           args.EnabledIndexes,
@@ -101,6 +102,9 @@ func createElasticProcessor(args ArgsIndexerFactory) (dataindexer.ElasticProcess
 		ImportDB:                 args.ImportDB,
 		Version:                  args.Version,
 		EnableEpochsConfig:       args.EnableEpochsConfig,
+		UseTemplatesFromFiles:    args.UseTemplatesFromFiles,
+		ConfigPath:               args.ConfigPath,
+		IndicesWithPolicy:        args.IndicesWithPolicy,
 	}
 
 	return factory.CreateElasticProcessor(argsElasticProcFac)

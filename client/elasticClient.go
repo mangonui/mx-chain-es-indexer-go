@@ -76,6 +76,26 @@ func (ec *elasticClient) CheckAndCreatePolicy(policyName string, policy *bytes.B
 	return ec.createPolicy(policyName, policy)
 }
 
+// SetWriteIndexTrue will set the provided index as write index
+func (ec *elasticClient) SetWriteIndexTrue(alias string, index string) error {
+	body := fmt.Sprintf(`{"actions" : [ { "add" : { "index" : "%s", "alias" : "%s",  "is_write_index" : true } }]}`, index, alias)
+	res, err := ec.client.Indices.UpdateAliases(
+		bytes.NewBuffer([]byte(body)),
+	)
+	if err != nil {
+		return err
+	}
+
+	defer closeBody(res)
+
+	if res.IsError() {
+		return fmt.Errorf("%s", res.String())
+	}
+
+	return nil
+
+}
+
 // CheckAndCreateIndex creates a new index if it does not already exist
 func (ec *elasticClient) CheckAndCreateIndex(indexName string) error {
 	if ec.indexExists(indexName) {
