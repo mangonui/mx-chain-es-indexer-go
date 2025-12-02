@@ -105,6 +105,7 @@ func createElasticProcessor(args ArgsIndexerFactory) (dataindexer.ElasticProcess
 		UseTemplatesFromFiles:    args.UseTemplatesFromFiles,
 		ConfigPath:               args.ConfigPath,
 		IndicesWithPolicy:        args.IndicesWithPolicy,
+		NumWritesInParallel:      args.NumWritesInParallel,
 	}
 
 	return factory.CreateElasticProcessor(argsElasticProcFac)
