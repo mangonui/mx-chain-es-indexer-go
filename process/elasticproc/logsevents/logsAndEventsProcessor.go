@@ -7,7 +7,6 @@ import (
 	"github.com/multiversx/mx-chain-core-go/core"
 	"github.com/multiversx/mx-chain-core-go/core/check"
 	coreData "github.com/multiversx/mx-chain-core-go/data"
-	"github.com/multiversx/mx-chain-core-go/data/outport"
 	"github.com/multiversx/mx-chain-core-go/data/transaction"
 	"github.com/multiversx/mx-chain-core-go/hashing"
 	"github.com/multiversx/mx-chain-core-go/marshal"
@@ -89,7 +88,7 @@ func createEventsProcessors(args ArgsLogsAndEventsProcessor) []eventsProcessor {
 
 // ExtractDataFromLogs will extract data from the provided logs and events and put in altered addresses
 func (lep *logsAndEventsProcessor) ExtractDataFromLogs(
-	logsAndEvents []*outport.LogData,
+	logsAndEvents []*transaction.LogData,
 	preparedResults *data.PreparedResults,
 	shardID uint32,
 	numOfShards uint32,
@@ -191,7 +190,7 @@ func (lep *logsAndEventsProcessor) processEvent(lgData *logsData, logHashHexEnco
 
 func (lep *logsAndEventsProcessor) prepareLogsForDB(
 	lgData *logsData,
-	logsAndEvents []*outport.LogData,
+	logsAndEvents []*transaction.LogData,
 	shardID uint32,
 ) ([]*data.Logs, []*data.LogEvent) {
 	logs := make([]*data.Logs, 0, len(logsAndEvents))
