@@ -34,6 +34,7 @@
             },
             "timestampMs": {
               "type":   "date",
+              "index":  "false",
               "format": "epoch_millis"
             },
             "value": {
