@@ -6,7 +6,7 @@
     ]
     use-templates-from-files = true
     [config.policies]
-        enable = false
+        enabled = true
         indices-with-policy = ["rating", "transactions", "blocks", "validators", "miniblocks", "rounds", "accounts",
             "accountshistory", "receipts", "scresults", "accountsesdt", "accountsesdthistory", "epochinfo",
             "scdeploys", "tokens", "tags", "logs", "delegators", "operations", "esdts", "events", "executionresults"]
