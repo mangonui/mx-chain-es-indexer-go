@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/multiversx/mx-chain-core-go/core"
-	"github.com/multiversx/mx-chain-core-go/data/outport"
 	"github.com/multiversx/mx-chain-core-go/data/transaction"
 	"github.com/multiversx/mx-chain-es-indexer-go/data"
 	"github.com/multiversx/mx-chain-es-indexer-go/mock"
@@ -57,7 +56,7 @@ func TestNewLogsAndEventsProcessor(t *testing.T) {
 func TestLogsAndEventsProcessor_ExtractDataFromLogsAndPutInAltered(t *testing.T) {
 	t.Parallel()
 
-	logsAndEvents := []*outport.LogData{
+	logsAndEvents := []*transaction.LogData{
 		nil,
 		{
 			TxHash: hex.EncodeToString([]byte("h3")),
@@ -212,7 +211,7 @@ func TestLogsAndEventsProcessor_ExtractDataFromLogsAndPutInAltered(t *testing.T)
 func TestLogsAndEventsProcessor_PrepareLogsForDB(t *testing.T) {
 	t.Parallel()
 
-	logsAndEvents := []*outport.LogData{
+	logsAndEvents := []*transaction.LogData{
 		nil,
 		{
 			TxHash: hex.EncodeToString([]byte("txHash")),
@@ -262,8 +261,8 @@ func TestLogsAndEventsProcessor_PrepareLogsForDB(t *testing.T) {
 func TestLogsAndEventsProcessor_ExtractDataFromLogsNFTBurn(t *testing.T) {
 	t.Parallel()
 
-	logsAndEventsSlice := make([]*outport.LogData, 1)
-	logsAndEventsSlice[0] = &outport.LogData{
+	logsAndEventsSlice := make([]*transaction.LogData, 1)
+	logsAndEventsSlice[0] = &transaction.LogData{
 		TxHash: "h1",
 		Log: &transaction.Log{
 			Address: []byte("address"),
@@ -308,7 +307,7 @@ func TestLogsAndEventsProcessor_ExtractDataFromLogsNFTBurn(t *testing.T) {
 func TestPrepareLogsAndEvents_LogEvents(t *testing.T) {
 	t.Parallel()
 
-	logsAndEvents := []*outport.LogData{
+	logsAndEvents := []*transaction.LogData{
 		{
 			TxHash: hex.EncodeToString([]byte("txHash")),
 			Log: &transaction.Log{

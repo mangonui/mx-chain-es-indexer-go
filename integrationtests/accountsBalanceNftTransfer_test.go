@@ -62,7 +62,7 @@ func TestAccountBalanceNFTTransfer(t *testing.T) {
 	}
 
 	pool := &outport.TransactionPool{
-		Logs: []*outport.LogData{
+		Logs: []*transaction.LogData{
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
@@ -111,7 +111,7 @@ func TestAccountBalanceNFTTransfer(t *testing.T) {
 	}
 
 	pool = &outport.TransactionPool{
-		Logs: []*outport.LogData{
+		Logs: []*transaction.LogData{
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{

@@ -62,7 +62,7 @@ func TestIndexAccountsBalance(t *testing.T) {
 	}
 
 	pool := &outport.TransactionPool{
-		Logs: []*outport.LogData{
+		Logs: []*transaction.LogData{
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
@@ -94,7 +94,7 @@ func TestIndexAccountsBalance(t *testing.T) {
 	require.Nil(t, err)
 	require.JSONEq(t, readExpectedResult("./testdata/accountsBalanceWithLowerTimestamp/account-balance-esdt-first-update.json"), string(genericResponse.Docs[0].Source))
 
-	//////////////////// INDEX BALANCE LOWER TIMESTAMP ///////////////////////////////////
+	// ////////////////// INDEX BALANCE LOWER TIMESTAMP ///////////////////////////////////
 
 	header = &dataBlock.Header{
 		Round:     51,
@@ -117,7 +117,7 @@ func TestIndexAccountsBalance(t *testing.T) {
 	require.Nil(t, err)
 	require.JSONEq(t, readExpectedResult("./testdata/accountsBalanceWithLowerTimestamp/account-balance-esdt-first-update.json"), string(genericResponse.Docs[0].Source))
 
-	//////////////////// INDEX BALANCE HIGHER TIMESTAMP ///////////////////////////////////
+	// ////////////////// INDEX BALANCE HIGHER TIMESTAMP ///////////////////////////////////
 	header = &dataBlock.Header{
 		Round:     51,
 		TimeStamp: 6000,
@@ -138,7 +138,7 @@ func TestIndexAccountsBalance(t *testing.T) {
 				FeeInfo: &outport.FeeInfo{},
 			},
 		},
-		Logs: []*outport.LogData{
+		Logs: []*transaction.LogData{
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
@@ -179,7 +179,7 @@ func TestIndexAccountsBalance(t *testing.T) {
 	require.Nil(t, err)
 	require.JSONEq(t, readExpectedResult("./testdata/accountsBalanceWithLowerTimestamp/account-balance-esdt-second-update.json"), string(genericResponse.Docs[0].Source))
 
-	//////////////////////// DELETE ESDT BALANCE LOWER TIMESTAMP ////////////////
+	// ////////////////////// DELETE ESDT BALANCE LOWER TIMESTAMP ////////////////
 
 	esdtToken.Value = big.NewInt(0)
 	esProc, err = CreateElasticProcessor(esClient)
