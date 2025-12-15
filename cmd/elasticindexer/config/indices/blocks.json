@@ -170,7 +170,7 @@
           "type": "keyword"
         },
         "nonce": {
-          "type": "double"
+          "type": "long"
         },
         "notarizedBlocksHashes": {
           "type": "keyword"
