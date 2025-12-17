@@ -101,6 +101,7 @@ func createElasticProcessor(args ArgsIndexerFactory) (dataindexer.ElasticProcess
 		ImportDB:                 args.ImportDB,
 		Version:                  args.Version,
 		EnableEpochsConfig:       args.EnableEpochsConfig,
+		NumWritesInParallel:      args.NumWritesInParallel,
 	}
 
 	return factory.CreateElasticProcessor(argsElasticProcFac)
