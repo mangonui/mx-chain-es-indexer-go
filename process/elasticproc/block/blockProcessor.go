@@ -334,7 +334,12 @@ func (bp *blockProcessor) addEpochStartShardDataForMeta(epochStartShardData node
 func (bp *blockProcessor) getEncodedMBSHashes(body *nodeBlock.Body, intraShardMbs []*nodeBlock.MiniBlock) []string {
 	miniblocksHashes := make([]string, 0)
 	mbs := append(body.MiniBlocks, intraShardMbs...)
+	mapMbsHashes := make(map[string]struct{})
 	for _, miniblock := range mbs {
+		if miniblock.Type == nodeBlock.PeerBlock {
+			continue
+		}
+
 		mbHash, errComputeHash := core.CalculateHash(bp.marshalizer, bp.hasher, miniblock)
 		if errComputeHash != nil {
 			log.Warn("internal error computing hash", "error", errComputeHash)
@@ -343,6 +348,11 @@ func (bp *blockProcessor) getEncodedMBSHashes(body *nodeBlock.Body, intraShardMb
 		}
 
 		encodedMbHash := hex.EncodeToString(mbHash)
+		if _, found := mapMbsHashes[encodedMbHash]; found {
+			continue
+		}
+
+		mapMbsHashes[encodedMbHash] = struct{}{}
 		miniblocksHashes = append(miniblocksHashes, encodedMbHash)
 	}
 
