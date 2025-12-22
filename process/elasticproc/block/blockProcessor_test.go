@@ -291,8 +291,12 @@ func TestBlockProcessor_PrepareBlockForDBEpochStartMeta(t *testing.T) {
 				HeaderHash:  []byte("hash"),
 				Body: &dataBlock.Body{
 					MiniBlocks: []*dataBlock.MiniBlock{
-						{},
-						{},
+						{
+							Reserved: []byte("rrr"),
+						},
+						{
+							Reserved: []byte("bbb"),
+						},
 					},
 				},
 			},
@@ -311,12 +315,12 @@ func TestBlockProcessor_PrepareBlockForDBEpochStartMeta(t *testing.T) {
 		Round:                 0,
 		Epoch:                 0,
 		Hash:                  "68617368",
-		MiniBlocksHashes:      []string{"8748c4677b01f7db984004fa8465afbf55feaab4b573174c8c0afa282941b9e4", "8748c4677b01f7db984004fa8465afbf55feaab4b573174c8c0afa282941b9e4"},
+		MiniBlocksHashes:      []string{"89a593868f8904c0271805b55cc3259cefcf45284c0e1b0bf02781758ed88909", "1b90cc55d9b861b903fd793616b85aa8418f7e313746d7184a73950ab32bf3da"},
 		NotarizedBlocksHashes: nil,
 		Proposer:              0,
 		Validators:            nil,
 		PubKeyBitmap:          "6269746d617031",
-		Size:                  914,
+		Size:                  950,
 		SizeTxs:               0,
 		Timestamp:             123,
 		TimestampMs:           123000,
