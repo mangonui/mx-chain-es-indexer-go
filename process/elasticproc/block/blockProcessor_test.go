@@ -607,6 +607,7 @@ func TestPrepareExecutionResult(t *testing.T) {
 				Body: &dataBlock.Body{},
 				Results: map[string]*outport.ExecutionResultData{
 					hex.EncodeToString(executionResultHeaderHash): {
+						TimestampMs: 1234567890,
 						Body: &dataBlock.Body{
 							MiniBlocks: []*dataBlock.MiniBlock{
 								{
@@ -646,6 +647,7 @@ func TestPrepareExecutionResult(t *testing.T) {
 		GasUsed:              0,
 		Nonce:                1,
 		Round:                2,
+		TimestampMs:          1234567890,
 		Epoch:                3,
 		MiniBlocksHashes:     []string{"2dae16da63bc04a18cf7609e0a79d7867b11463660dbab048b044b8434bf0a82"},
 		MiniBlocksDetails: []*data.MiniBlocksDetails{
