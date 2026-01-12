@@ -26,7 +26,7 @@ func createOutportBlockWithHeader(
 	coreAlteredAccounts map[string]*alteredAccount.AlteredAccount,
 	numOfShards uint32,
 ) *outport.OutportBlockWithHeader {
-	return &outport.OutportBlockWithHeader{
+	outportBlock := &outport.OutportBlockWithHeader{
 		OutportBlock: &outport.OutportBlock{
 			BlockData: &outport.BlockData{
 				Body:        body,
@@ -39,6 +39,21 @@ func createOutportBlockWithHeader(
 		},
 		Header: header,
 	}
+
+	if !header.IsHeaderV3() {
+		return outportBlock
+	}
+
+	outportBlock.OutportBlock.BlockData.Results = map[string]*outport.ExecutionResultData{}
+	for _, executionResult := range header.GetExecutionResultsHandlers() {
+		outportBlock.OutportBlock.BlockData.Results[hex.EncodeToString(executionResult.GetHeaderHash())] = &outport.ExecutionResultData{
+			HeaderNonce: executionResult.GetHeaderNonce(),
+			TimestampMs: header.GetTimeStamp(),
+			Body:        &dataBlock.Body{},
+		}
+	}
+
+	return outportBlock
 }
 
 func TestAccountBalanceNFTTransfer(t *testing.T) {

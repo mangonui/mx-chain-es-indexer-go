@@ -1,12 +1,13 @@
 {
   "rootHash": "",
   "notarizedInBlockHash": "686831",
-  "accumulatedFees": "",
-  "developerFees": "",
+  "accumulatedFees": "0",
+  "developerFees": "0",
   "txCount": 0,
   "gasUsed": 0,
   "nonce": 1,
   "round": 2,
   "epoch": 3,
-  "miniBlocksHashes":null
+  "miniBlocksHashes":[],
+  "timestampMs": 1234567890
 }
