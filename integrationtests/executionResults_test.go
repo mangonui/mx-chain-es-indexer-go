@@ -5,6 +5,7 @@ package integrationtests
 import (
 	"context"
 	"encoding/hex"
+	"math/big"
 	"testing"
 
 	dataBlock "github.com/multiversx/mx-chain-core-go/data/block"
@@ -21,6 +22,7 @@ func TestIndexExecutionResults(t *testing.T) {
 	require.Nil(t, err)
 
 	header := &dataBlock.HeaderV3{
+		TimestampMs: 1234567890,
 		ExecutionResults: []*dataBlock.ExecutionResult{
 			{
 				BaseExecutionResult: &dataBlock.BaseExecutionResult{
@@ -29,6 +31,8 @@ func TestIndexExecutionResults(t *testing.T) {
 					HeaderRound: 2,
 					HeaderEpoch: 3,
 				},
+				AccumulatedFees: big.NewInt(0),
+				DeveloperFees:   big.NewInt(0),
 			},
 			{
 				BaseExecutionResult: &dataBlock.BaseExecutionResult{
@@ -37,6 +41,8 @@ func TestIndexExecutionResults(t *testing.T) {
 					HeaderRound: 3,
 					HeaderEpoch: 3,
 				},
+				AccumulatedFees: big.NewInt(0),
+				DeveloperFees:   big.NewInt(0),
 			},
 		},
 	}

@@ -68,6 +68,7 @@ type ExecutionResult struct {
 	GasUsed              uint64               `json:"gasUsed"`
 	Nonce                uint64               `json:"nonce"`
 	Round                uint64               `json:"round"`
+	TimestampMs          uint64               `json:"timestampMs"`
 	Epoch                uint32               `json:"epoch"`
 	MiniBlocksHashes     []string             `json:"miniBlocksHashes"`
 	MiniBlocksDetails    []*MiniBlocksDetails `json:"miniBlocksDetails,omitempty"`

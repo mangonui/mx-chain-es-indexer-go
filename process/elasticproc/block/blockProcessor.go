@@ -184,6 +184,7 @@ func (bp *blockProcessor) prepareExecutionResult(baseExecutionResult coreData.Ba
 	}
 
 	executionResult.MiniBlocksHashes = bp.getEncodedMBSHashes(executionResultData.Body, executionResultData.IntraShardMiniBlocks)
+	executionResult.TimestampMs = executionResultData.TimestampMs
 
 	switch t := baseExecutionResult.(type) {
 	case *nodeBlock.MetaExecutionResult:
