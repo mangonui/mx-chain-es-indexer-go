@@ -29,8 +29,7 @@ func createOutportBlockWithHeader(
 	outportBlock := &outport.OutportBlockWithHeader{
 		OutportBlock: &outport.OutportBlock{
 			BlockData: &outport.BlockData{
-				Body:        body,
-				TimestampMs: header.GetTimeStamp() * 1000,
+				Body: body,
 			},
 			TransactionPool: pool,
 			AlteredAccounts: coreAlteredAccounts,
@@ -41,9 +40,11 @@ func createOutportBlockWithHeader(
 	}
 
 	if !header.IsHeaderV3() {
+		outportBlock.OutportBlock.BlockData.TimestampMs = header.GetTimeStamp() * 1000
 		return outportBlock
 	}
 
+	outportBlock.OutportBlock.BlockData.TimestampMs = header.GetTimeStamp()
 	outportBlock.OutportBlock.BlockData.Results = map[string]*outport.ExecutionResultData{}
 	for _, executionResult := range header.GetExecutionResultsHandlers() {
 		outportBlock.OutportBlock.BlockData.Results[hex.EncodeToString(executionResult.GetHeaderHash())] = &outport.ExecutionResultData{
