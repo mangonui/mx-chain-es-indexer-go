@@ -301,3 +301,65 @@ func TestGetMoveBalanceTransactionInvalid(t *testing.T) {
 	dbTx.UUID = ""
 	require.Equal(t, expectedTx, dbTx)
 }
+
+func TestPrepareUnexecutableTransaction(t *testing.T) {
+	t.Parallel()
+
+	txHash := []byte("txHash")
+	headerData := &data.HeaderData{
+		Timestamp:      1234,
+		TimestampMs:    1234000,
+		NumberOfShards: 3,
+	}
+	gasPrice := uint64(1000)
+	gasLimit := uint64(1000)
+	cp := createCommonProcessor()
+
+	tx := &transaction.Transaction{
+		Nonce:       1,
+		Value:       big.NewInt(1000),
+		RcvAddr:     []byte("receiver"),
+		SndAddr:     []byte("sender"),
+		GasPrice:    gasPrice,
+		GasLimit:    gasLimit,
+		Data:        []byte("data"),
+		ChainID:     []byte("1"),
+		Version:     1,
+		Signature:   []byte("signature"),
+		RcvUserName: []byte("rcv"),
+		SndUserName: []byte("snd"),
+	}
+
+	senderAddr, err := cp.addressPubkeyConverter.Encode(tx.RcvAddr)
+	require.Nil(t, err)
+	receiverAddr, err := cp.addressPubkeyConverter.Encode(tx.SndAddr)
+	require.Nil(t, err)
+
+	expectedTx := &data.Transaction{
+		Hash:          string(txHash),
+		Nonce:         tx.Nonce,
+		Round:         headerData.Round,
+		Value:         tx.Value.String(),
+		ValueNum:      1e-15,
+		Receiver:      senderAddr,
+		Sender:        receiverAddr,
+		GasPrice:      gasPrice,
+		GasLimit:      gasLimit,
+		Data:          tx.Data,
+		Signature:     hex.EncodeToString(tx.Signature),
+		Status:        transaction.TxStatusNotExecutable.String(),
+		ESDTValuesNum: []float64{},
+		Operation:     "transfer",
+		Version:       1,
+		Receivers:     []string{},
+		Timestamp:     1234,
+		TimestampMs:   1234000,
+		ReceiverShard: uint32(2),
+		SenderShard:   uint32(2),
+	}
+
+	dbTx := cp.prepareUnexecutableTransaction(string(txHash), tx, headerData)
+	dbTx.UUID = ""
+
+	require.Equal(t, expectedTx, dbTx)
+}

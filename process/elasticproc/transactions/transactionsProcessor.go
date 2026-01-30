@@ -117,6 +117,15 @@ func (tdp *txsDatabaseProcessor) PrepareTransactionsForDatabase(
 		}
 	}
 
+	for hashHex, tx := range pool.UnexecutableTransactions {
+		decodedHash, errD := hex.DecodeString(hashHex)
+		if errD != nil {
+			continue
+		}
+
+		normalTxs[string(decodedHash)] = tdp.txBuilder.prepareUnexecutableTransaction(hashHex, tx, headerData)
+	}
+
 	normalTxs = tdp.setTransactionSearchOrder(normalTxs)
 	dbReceipts := tdp.txsGrouper.groupReceipts(headerData, pool.Receipts)
 	dbSCResults := tdp.scrsProc.processSCRs(miniBlocks, headerData, pool.SmartContractResults)

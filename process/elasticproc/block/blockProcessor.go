@@ -137,7 +137,8 @@ func (bp *blockProcessor) PrepareBlockForDB(obh *outport.OutportBlockWithHeader)
 
 	bp.addEpochStartInfoForMeta(obh.Header, elasticBlock)
 
-	elasticBlock.MiniBlocksDetails = prepareMiniBlockDetails(obh.Header.GetMiniBlockHeaderHandlers(), obh.BlockData.Body, obh.TransactionPool)
+	areProposedMBs := obh.Header.IsHeaderV3()
+	elasticBlock.MiniBlocksDetails = prepareMiniBlockDetails(obh.Header.GetMiniBlockHeaderHandlers(), obh.BlockData.Body, obh.TransactionPool, areProposedMBs)
 
 	appendBlockDetailsFromIntraShardMbs(elasticBlock, obh.BlockData.IntraShardMiniBlocks, obh.TransactionPool, len(obh.Header.GetMiniBlockHeaderHandlers()))
 
@@ -188,12 +189,12 @@ func (bp *blockProcessor) prepareExecutionResult(baseExecutionResult coreData.Ba
 
 	switch t := baseExecutionResult.(type) {
 	case *nodeBlock.MetaExecutionResult:
-		executionResult.MiniBlocksDetails = prepareMiniBlockDetails(t.GetMiniBlockHeadersHandlers(), executionResultData.Body, executionResultData.TransactionPool)
+		executionResult.MiniBlocksDetails = prepareMiniBlockDetails(t.GetMiniBlockHeadersHandlers(), executionResultData.Body, executionResultData.TransactionPool, false)
 		executionResult.AccumulatedFees = t.AccumulatedFees.String()
 		executionResult.DeveloperFees = t.DeveloperFees.String()
 		executionResult.TxCount = t.ExecutedTxCount
 	case *nodeBlock.ExecutionResult:
-		executionResult.MiniBlocksDetails = prepareMiniBlockDetails(t.GetMiniBlockHeadersHandlers(), executionResultData.Body, executionResultData.TransactionPool)
+		executionResult.MiniBlocksDetails = prepareMiniBlockDetails(t.GetMiniBlockHeadersHandlers(), executionResultData.Body, executionResultData.TransactionPool, false)
 		executionResult.AccumulatedFees = t.AccumulatedFees.String()
 		executionResult.DeveloperFees = t.DeveloperFees.String()
 		executionResult.TxCount = t.ExecutedTxCount
@@ -360,7 +361,7 @@ func (bp *blockProcessor) getEncodedMBSHashes(body *nodeBlock.Body, intraShardMb
 	return miniblocksHashes
 }
 
-func prepareMiniBlockDetails(mbHeaders []coreData.MiniBlockHeaderHandler, body *nodeBlock.Body, pool *outport.TransactionPool) []*data.MiniBlocksDetails {
+func prepareMiniBlockDetails(mbHeaders []coreData.MiniBlockHeaderHandler, body *nodeBlock.Body, pool *outport.TransactionPool, areProposed bool) []*data.MiniBlocksDetails {
 	mbsDetails := make([]*data.MiniBlocksDetails, 0, len(mbHeaders))
 	for idx, mbHeader := range mbHeaders {
 		mbType := nodeBlock.Type(mbHeader.GetTypeInt32())
@@ -369,17 +370,22 @@ func prepareMiniBlockDetails(mbHeaders []coreData.MiniBlockHeaderHandler, body *
 		}
 
 		txsHashes := body.MiniBlocks[idx].TxHashes
-		mbsDetails = append(mbsDetails, &data.MiniBlocksDetails{
-			IndexFirstProcessedTx:    mbHeader.GetIndexOfFirstTxProcessed(),
-			IndexLastProcessedTx:     mbHeader.GetIndexOfLastTxProcessed(),
-			MBIndex:                  idx,
-			ProcessingType:           nodeBlock.ProcessingType(mbHeader.GetProcessingType()).String(),
-			Type:                     mbType.String(),
-			SenderShardID:            mbHeader.GetSenderShardID(),
-			ReceiverShardID:          mbHeader.GetReceiverShardID(),
-			TxsHashes:                hexEncodeSlice(txsHashes),
-			ExecutionOrderTxsIndices: extractExecutionOrderIndicesFromPool(mbHeader, txsHashes, pool),
-		})
+		mbDetails := &data.MiniBlocksDetails{
+			IndexFirstProcessedTx: mbHeader.GetIndexOfFirstTxProcessed(),
+			IndexLastProcessedTx:  mbHeader.GetIndexOfLastTxProcessed(),
+			MBIndex:               idx,
+			ProcessingType:        nodeBlock.ProcessingType(mbHeader.GetProcessingType()).String(),
+			Type:                  mbType.String(),
+			SenderShardID:         mbHeader.GetSenderShardID(),
+			ReceiverShardID:       mbHeader.GetReceiverShardID(),
+			TxsHashes:             hexEncodeSlice(txsHashes),
+		}
+		if !areProposed {
+			mbDetails.ExecutionOrderTxsIndices = extractExecutionOrderIndicesFromPool(mbHeader, txsHashes, pool)
+		}
+
+		mbsDetails = append(mbsDetails, mbDetails)
+
 	}
 
 	return mbsDetails
