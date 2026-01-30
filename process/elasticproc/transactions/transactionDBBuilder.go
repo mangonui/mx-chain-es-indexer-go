@@ -36,20 +36,20 @@ func newTransactionDBBuilder(
 	}
 }
 
-func (dtb *dbTransactionBuilder) prepareUnexecutableTransaction(txHash []byte, tx *transaction.Transaction, headerData *data.HeaderData) *data.Transaction {
+func (dtb *dbTransactionBuilder) prepareUnexecutableTransaction(txHashHex string, tx *transaction.Transaction, headerData *data.HeaderData) *data.Transaction {
 	res := dtb.dataFieldParser.Parse(tx.Data, tx.SndAddr, tx.RcvAddr, headerData.NumberOfShards)
 	receiversAddr, _ := dtb.addressPubkeyConverter.EncodeSlice(res.Receivers)
 
 	valueNum, err := dtb.balanceConverter.ConvertBigValueToFloat(tx.Value)
 	if err != nil {
 		log.Warn("dbTransactionBuilder.prepareUnexecutableTransaction: cannot compute value as num", "value", tx.Value,
-			"hash", txHash, "error", err)
+			"hash", txHashHex, "error", err)
 	}
 
 	esdtValuesNum, err := dtb.balanceConverter.ComputeSliceOfStringsAsFloat(res.ESDTValues)
 	if err != nil {
 		log.Warn("dbTransactionBuilder.prepareTransaction: cannot compute esdt values as num",
-			"esdt values", res.ESDTValues, "hash", txHash, "error", err)
+			"esdt values", res.ESDTValues, "hash", txHashHex, "error", err)
 	}
 
 	var esdtValues []string
@@ -66,7 +66,7 @@ func (dtb *dbTransactionBuilder) prepareUnexecutableTransaction(txHash []byte, t
 	}
 
 	return &data.Transaction{
-		Hash:              hex.EncodeToString(txHash),
+		Hash:              txHashHex,
 		Nonce:             tx.Nonce,
 		Round:             headerData.Round,
 		Value:             tx.Value.String(),

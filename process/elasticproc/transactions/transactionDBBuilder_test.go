@@ -336,7 +336,7 @@ func TestPrepareUnexecutableTransaction(t *testing.T) {
 	require.Nil(t, err)
 
 	expectedTx := &data.Transaction{
-		Hash:          hex.EncodeToString(txHash),
+		Hash:          string(txHash),
 		Nonce:         tx.Nonce,
 		Round:         headerData.Round,
 		Value:         tx.Value.String(),
@@ -358,7 +358,7 @@ func TestPrepareUnexecutableTransaction(t *testing.T) {
 		SenderShard:   uint32(2),
 	}
 
-	dbTx := cp.prepareUnexecutableTransaction(txHash, tx, headerData)
+	dbTx := cp.prepareUnexecutableTransaction(string(txHash), tx, headerData)
 	dbTx.UUID = ""
 
 	require.Equal(t, expectedTx, dbTx)

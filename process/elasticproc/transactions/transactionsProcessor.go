@@ -117,8 +117,13 @@ func (tdp *txsDatabaseProcessor) PrepareTransactionsForDatabase(
 		}
 	}
 
-	for hash, tx := range pool.UnexecutableTransactions {
-		normalTxs[hex.EncodeToString([]byte(hash))] = tdp.txBuilder.prepareUnexecutableTransaction([]byte(hash), tx, headerData)
+	for hashHex, tx := range pool.UnexecutableTransactions {
+		decodedHash, errD := hex.DecodeString(hashHex)
+		if errD != nil {
+			continue
+		}
+
+		normalTxs[string(decodedHash)] = tdp.txBuilder.prepareUnexecutableTransaction(hashHex, tx, headerData)
 	}
 
 	normalTxs = tdp.setTransactionSearchOrder(normalTxs)
