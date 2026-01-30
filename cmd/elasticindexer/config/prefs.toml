@@ -9,7 +9,7 @@
         # Possible values: json, gogo protobuf. Should be compatible with mx-chain-node outport driver config
         data-marshaller-type = "json"
         # Retry duration (receive/send ack signal) in seconds
-        retry-duration-in-seconds = 5
+        retry-duration-in-seconds = 50
         # Signals if in case of data payload processing error, we should send the ack signal or not
         blocking-ack-on-error = true
         # After a message will be sent it will wait for an ack message if this flag is enabled
