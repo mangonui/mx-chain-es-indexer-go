@@ -9,6 +9,7 @@ import (
 	"github.com/multiversx/mx-chain-core-go/data/block"
 	"github.com/multiversx/mx-chain-core-go/data/outport"
 	"github.com/multiversx/mx-chain-core-go/data/receipt"
+	"github.com/multiversx/mx-chain-core-go/data/transaction"
 	"github.com/multiversx/mx-chain-es-indexer-go/data"
 	"github.com/multiversx/mx-chain-es-indexer-go/process/dataindexer"
 	"github.com/multiversx/mx-chain-es-indexer-go/process/elasticproc/converters"
@@ -32,6 +33,67 @@ func newTransactionDBBuilder(
 		dataFieldParser:         dataFieldParser,
 		balanceConverter:        balanceConverter,
 		relayedV1V2DisableEpoch: relayedV1V2DisableEpoch,
+	}
+}
+
+func (dtb *dbTransactionBuilder) prepareUnexecutableTransaction(txHash []byte, tx *transaction.Transaction, headerData *data.HeaderData) *data.Transaction {
+	res := dtb.dataFieldParser.Parse(tx.Data, tx.SndAddr, tx.RcvAddr, headerData.NumberOfShards)
+	receiversAddr, _ := dtb.addressPubkeyConverter.EncodeSlice(res.Receivers)
+
+	valueNum, err := dtb.balanceConverter.ConvertBigValueToFloat(tx.Value)
+	if err != nil {
+		log.Warn("dbTransactionBuilder.prepareUnexecutableTransaction: cannot compute value as num", "value", tx.Value,
+			"hash", txHash, "error", err)
+	}
+
+	esdtValuesNum, err := dtb.balanceConverter.ComputeSliceOfStringsAsFloat(res.ESDTValues)
+	if err != nil {
+		log.Warn("dbTransactionBuilder.prepareTransaction: cannot compute esdt values as num",
+			"esdt values", res.ESDTValues, "hash", txHash, "error", err)
+	}
+
+	var esdtValues []string
+	if areESDTValuesOK(res.ESDTValues) {
+		esdtValues = res.ESDTValues
+	}
+	guardianAddress := ""
+	if len(tx.GuardianAddr) > 0 {
+		guardianAddress = dtb.addressPubkeyConverter.SilentEncode(tx.GuardianAddr, log)
+	}
+	relayedAddress := ""
+	if len(tx.RelayerAddr) > 0 {
+		relayedAddress = dtb.addressPubkeyConverter.SilentEncode(tx.RelayerAddr, log)
+	}
+
+	return &data.Transaction{
+		Hash:              hex.EncodeToString(txHash),
+		Nonce:             tx.Nonce,
+		Round:             headerData.Round,
+		Value:             tx.Value.String(),
+		Receiver:          dtb.addressPubkeyConverter.SilentEncode(tx.RcvAddr, log),
+		Sender:            dtb.addressPubkeyConverter.SilentEncode(tx.SndAddr, log),
+		ValueNum:          valueNum,
+		ReceiverShard:     sharding.ComputeShardID(tx.RcvAddr, headerData.NumberOfShards),
+		SenderShard:       sharding.ComputeShardID(tx.SndAddr, headerData.NumberOfShards),
+		GasPrice:          tx.GasPrice,
+		GasLimit:          tx.GasLimit,
+		Data:              tx.Data,
+		Signature:         hex.EncodeToString(tx.Signature),
+		Status:            transaction.TxStatusNotExecutable.String(),
+		IsScCall:          core.IsSmartContractAddress(tx.RcvAddr),
+		ESDTValues:        esdtValues,
+		ESDTValuesNum:     esdtValuesNum,
+		Receivers:         receiversAddr,
+		Version:           tx.Version,
+		GuardianAddress:   guardianAddress,
+		GuardianSignature: hex.EncodeToString(tx.GuardianSignature),
+		Operation:         res.Operation,
+		RelayedSignature:  hex.EncodeToString(tx.RelayerSignature),
+		RelayedAddr:       relayedAddress,
+		UUID:              converters.GenerateBase64UUID(),
+		Epoch:             headerData.Epoch,
+		Timestamp:         headerData.Timestamp,
+		TimestampMs:       headerData.TimestampMs,
 	}
 }
 
