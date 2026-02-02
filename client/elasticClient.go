@@ -115,7 +115,7 @@ func (ec *elasticClient) CheckAndCreateAlias(alias string, indexName string) err
 func (ec *elasticClient) DoBulkRequest(ctx context.Context, buff *bytes.Buffer, index string) error {
 	reader := bytes.NewReader(buff.Bytes())
 
-	options := make([]func(*esapi.BulkRequest), 0)
+	options := make([]func(*esapi.BulkRequest), 0, 2)
 	if index != "" {
 		options = append(options, ec.client.Bulk.WithIndex(index))
 	}
@@ -127,8 +127,7 @@ func (ec *elasticClient) DoBulkRequest(ctx context.Context, buff *bytes.Buffer, 
 		options...,
 	)
 	if err != nil {
-		log.Warn("elasticClient.DoBulkRequest",
-			"indexer do bulk request no response", err.Error())
+		log.Warn("elasticClient.DoBulkRequest", "error", err.Error())
 		return err
 	}
 

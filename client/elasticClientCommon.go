@@ -95,25 +95,41 @@ func elasticBulkRequestResponseHandler(res *esapi.Response) error {
 	if res.IsError() {
 		return fmt.Errorf("%s", res.String())
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
-	bodyBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return fmt.Errorf("%w cannot read elastic response body bytes", err)
+	var response struct {
+		Errors bool            `json:"errors"`
+		Items  json.RawMessage `json:"items"`
 	}
 
-	return extractErrorFromBulkBodyResponseBytes(bodyBytes)
+	err := json.NewDecoder(res.Body).Decode(&response)
+	if err != nil {
+		return fmt.Errorf("cannot decode elastic response body: %w", err)
+	}
+
+	if !response.Errors {
+		return nil
+	}
+
+	return extractErrorFromBulkItems(response.Items)
 }
 
-func extractErrorFromBulkBodyResponseBytes(bodyBytes []byte) error {
-	response := BulkRequestResponse{}
-	err := json.Unmarshal(bodyBytes, &response)
+func extractErrorFromBulkItems(itemsBytes []byte) error {
+	var items []struct {
+		ItemIndex  *Item `json:"index"`
+		ItemUpdate *Item `json:"update"`
+	}
+
+	err := json.Unmarshal(itemsBytes, &items)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot unmarshal bulk items: %w", err)
 	}
 
 	count := 0
 	errorsString := ""
-	for _, item := range response.Items {
+	for _, item := range items {
 		var selectedItem Item
 
 		switch {

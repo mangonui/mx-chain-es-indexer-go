@@ -523,7 +523,6 @@ func (ei *elasticProcessor) prepareAndSaveTransactionsData(
 	alteredAccounts map[string]*alteredAccount.AlteredAccount,
 	buffers *data.BufferSlice,
 ) error {
-
 	preparedResults := ei.transactionsProc.PrepareTransactionsForDatabase(miniBlocks, headerData, pool, ei.isImportDB())
 	logsData := ei.logsAndEventsProc.ExtractDataFromLogs(pool.Logs, preparedResults, headerData.ShardID, headerData.NumberOfShards, headerData.TimestampMs)
 
@@ -626,12 +625,21 @@ func (ei *elasticProcessor) indexTransactionsFeeData(txsHashFeeData map[string]*
 		return nil
 	}
 
-	err := ei.transactionsProc.SerializeTransactionsFeeData(txsHashFeeData, buffSlice, elasticIndexer.TransactionsIndex)
-	if err != nil {
-		return nil
+	if ei.isIndexEnabled(elasticIndexer.TransactionsIndex) {
+		err := ei.transactionsProc.SerializeTransactionsFeeData(txsHashFeeData, buffSlice, elasticIndexer.TransactionsIndex)
+		if err != nil {
+			return err
+		}
 	}
 
-	return ei.transactionsProc.SerializeTransactionsFeeData(txsHashFeeData, buffSlice, elasticIndexer.OperationsIndex)
+	if ei.isIndexEnabled(elasticIndexer.OperationsIndex) {
+		err := ei.transactionsProc.SerializeTransactionsFeeData(txsHashFeeData, buffSlice, elasticIndexer.OperationsIndex)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (ei *elasticProcessor) indexLogs(logsDB []*data.Logs, buffSlice *data.BufferSlice) error {
