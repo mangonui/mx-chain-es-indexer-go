@@ -63,7 +63,7 @@ func (bs *BufferSlice) Buffers() []*bytes.Buffer {
 
 // Merge merges another BufferSlice into this one.
 func (bs *BufferSlice) Merge(other *BufferSlice) {
-	if other == nil {
+	if other == nil || len(other.buffSlice) == 0 {
 		return
 	}
 
