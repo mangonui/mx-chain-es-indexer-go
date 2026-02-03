@@ -315,43 +315,38 @@ func (bp *blockProcessor) addEpochStartInfoForMeta(header coreData.HeaderHandler
 	}
 
 	epochStartShardsData := metaHeader.GetEpochStartHandler().GetLastFinalizedHeaderHandlers()
-	block.EpochStartShardsData = make([]*data.EpochStartShardData, 0, len(metaHeader.GetEpochStartHandler().GetLastFinalizedHeaderHandlers()))
+	block.EpochStartShardsData = make([]*data.EpochStartShardData, 0, len(epochStartShardsData))
 	for _, epochStartShardDataHandler := range epochStartShardsData {
-		epochStartShardData, isOk := epochStartShardDataHandler.(*nodeBlock.EpochStartShardData)
-		if !isOk {
-			continue
-		}
-
-		bp.addEpochStartShardDataForMeta(epochStartShardData, block)
+		bp.addEpochStartShardDataForMeta(epochStartShardDataHandler, block)
 	}
 }
 
-func (bp *blockProcessor) addEpochStartShardDataForMeta(epochStartShardData *nodeBlock.EpochStartShardData, block *data.Block) {
+func (bp *blockProcessor) addEpochStartShardDataForMeta(epochStartShardData coreData.EpochStartShardDataHandler, block *data.Block) {
 	shardData := &data.EpochStartShardData{
-		ShardID:               epochStartShardData.ShardID,
-		Epoch:                 epochStartShardData.Epoch,
-		Round:                 epochStartShardData.Round,
-		Nonce:                 epochStartShardData.Nonce,
-		HeaderHash:            hex.EncodeToString(epochStartShardData.HeaderHash),
-		RootHash:              hex.EncodeToString(epochStartShardData.RootHash),
-		ScheduledRootHash:     hex.EncodeToString(epochStartShardData.ScheduledRootHash),
-		FirstPendingMetaBlock: hex.EncodeToString(epochStartShardData.FirstPendingMetaBlock),
-		LastFinishedMetaBlock: hex.EncodeToString(epochStartShardData.LastFinishedMetaBlock),
+		ShardID:               epochStartShardData.GetShardID(),
+		Epoch:                 epochStartShardData.GetEpoch(),
+		Round:                 epochStartShardData.GetRound(),
+		Nonce:                 epochStartShardData.GetNonce(),
+		HeaderHash:            hex.EncodeToString(epochStartShardData.GetHeaderHash()),
+		RootHash:              hex.EncodeToString(epochStartShardData.GetRootHash()),
+		ScheduledRootHash:     hex.EncodeToString(epochStartShardData.GetScheduledRootHash()),
+		FirstPendingMetaBlock: hex.EncodeToString(epochStartShardData.GetFirstPendingMetaBlock()),
+		LastFinishedMetaBlock: hex.EncodeToString(epochStartShardData.GetLastFinishedMetaBlock()),
 	}
 
-	if len(epochStartShardData.PendingMiniBlockHeaders) == 0 {
+	if len(epochStartShardData.GetPendingMiniBlockHeaderHandlers()) == 0 {
 		block.EpochStartShardsData = append(block.EpochStartShardsData, shardData)
 		return
 	}
 
-	shardData.PendingMiniBlockHeaders = make([]*data.Miniblock, 0, len(epochStartShardData.PendingMiniBlockHeaders))
-	for _, pendingMb := range epochStartShardData.PendingMiniBlockHeaders {
+	shardData.PendingMiniBlockHeaders = make([]*data.Miniblock, 0, len(epochStartShardData.GetPendingMiniBlockHeaderHandlers()))
+	for _, pendingMb := range epochStartShardData.GetPendingMiniBlockHeaderHandlers() {
 		shardData.PendingMiniBlockHeaders = append(shardData.PendingMiniBlockHeaders, &data.Miniblock{
-			Hash:            hex.EncodeToString(pendingMb.Hash),
-			SenderShardID:   pendingMb.SenderShardID,
-			ReceiverShardID: pendingMb.ReceiverShardID,
-			Type:            pendingMb.Type.String(),
-			Reserved:        pendingMb.Reserved,
+			Hash:            hex.EncodeToString(pendingMb.GetHash()),
+			SenderShardID:   pendingMb.GetSenderShardID(),
+			ReceiverShardID: pendingMb.GetReceiverShardID(),
+			Type:            nodeBlock.Type(pendingMb.GetTypeInt32()).String(),
+			Reserved:        pendingMb.GetReserved(),
 		})
 	}
 
