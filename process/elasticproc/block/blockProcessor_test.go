@@ -662,3 +662,69 @@ func TestPrepareExecutionResult(t *testing.T) {
 		},
 	}, results.ExecutionResults[0])
 }
+
+func TestAddInBlockLastExecutionResultData(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil last execution result", func(t *testing.T) {
+		elasticBlock := &data.Block{}
+		obh := &outport.OutportBlockWithHeader{
+			Header: &dataBlock.Header{},
+		}
+
+		addInBlockLastExecutionResultData(elasticBlock, obh)
+
+		require.Equal(t, "", elasticBlock.LastExecutionResultHash)
+		require.Equal(t, uint64(0), elasticBlock.LastExecutionResultNonce)
+	})
+
+	t.Run("with ExecutionResultInfo", func(t *testing.T) {
+		elasticBlock := &data.Block{}
+		headerHash := []byte("headerHash")
+		nonce := uint64(10)
+
+		execResultInfo := &dataBlock.ExecutionResultInfo{
+			ExecutionResult: &dataBlock.BaseExecutionResult{
+				HeaderHash:  headerHash,
+				HeaderNonce: nonce,
+			},
+		}
+
+		obh := &outport.OutportBlockWithHeader{
+			Header: &dataBlock.HeaderV3{
+				LastExecutionResult: execResultInfo,
+			},
+		}
+
+		addInBlockLastExecutionResultData(elasticBlock, obh)
+
+		require.Equal(t, hex.EncodeToString(headerHash), elasticBlock.LastExecutionResultHash)
+		require.Equal(t, nonce, elasticBlock.LastExecutionResultNonce)
+	})
+
+	t.Run("with MetaExecutionResultInfo", func(t *testing.T) {
+		elasticBlock := &data.Block{}
+		headerHash := []byte("headerHashMeta")
+		nonce := uint64(20)
+
+		execResultInfo := &dataBlock.MetaExecutionResultInfo{
+			ExecutionResult: &dataBlock.BaseMetaExecutionResult{
+				BaseExecutionResult: &dataBlock.BaseExecutionResult{
+					HeaderHash:  headerHash,
+					HeaderNonce: nonce,
+				},
+			},
+		}
+
+		obh := &outport.OutportBlockWithHeader{
+			Header: &dataBlock.MetaBlockV3{
+				LastExecutionResult: execResultInfo,
+			},
+		}
+
+		addInBlockLastExecutionResultData(elasticBlock, obh)
+
+		require.Equal(t, hex.EncodeToString(headerHash), elasticBlock.LastExecutionResultHash)
+		require.Equal(t, nonce, elasticBlock.LastExecutionResultNonce)
+	})
+}

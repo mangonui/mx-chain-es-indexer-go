@@ -52,6 +52,8 @@ type Block struct {
 	Reserved                   []byte                 `json:"reserved,omitempty"`
 	ProposerBlsKey             string                 `json:"proposerBlsKey,omitempty"`
 	ExecutionResultBlockHashes []string               `json:"executionResultBlockHashes,omitempty"`
+	LastExecutionResultHash    string                 `json:"lastExecutionResultHash,omitempty"`
+	LastExecutionResultNonce   uint64                 `json:"lastExecutionResultNonce,omitempty"`
 }
 
 // ExecutionResult is a structure containing all the fields that need
