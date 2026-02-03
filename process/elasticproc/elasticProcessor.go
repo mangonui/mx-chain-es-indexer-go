@@ -627,7 +627,6 @@ func (ei *elasticProcessor) prepareAndSaveTransactionsData(
 	wg.Wait()
 	close(errCh)
 
-	// Check for errors
 	var errs []error
 	for err := range errCh {
 		errs = append(errs, err)
