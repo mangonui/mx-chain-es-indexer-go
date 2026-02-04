@@ -90,7 +90,7 @@ var Blocks = Object{
 						},
 						"nonce": Object{
 							"index": "false",
-							"type":  "double",
+							"type":  "long",
 						},
 						"pendingMiniBlockHeaders": Object{
 							"properties": Object{
