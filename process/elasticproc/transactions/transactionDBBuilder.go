@@ -37,7 +37,7 @@ func newTransactionDBBuilder(
 }
 
 func (dtb *dbTransactionBuilder) prepareUnexecutableTransaction(txHashHex string, tx *transaction.Transaction, headerData *data.HeaderData) *data.Transaction {
-	res := dtb.dataFieldParser.Parse(tx.Data, tx.SndAddr, tx.RcvAddr, headerData.NumberOfShards)
+	res := dtb.dataFieldParser.Parse(tx.Data, tx.SndAddr, tx.RcvAddr, headerData.NumberOfShards, headerData.Epoch)
 	receiversAddr, _ := dtb.addressPubkeyConverter.EncodeSlice(res.Receivers)
 
 	valueNum, err := dtb.balanceConverter.ConvertBigValueToFloat(tx.Value)
@@ -108,7 +108,7 @@ func (dtb *dbTransactionBuilder) prepareTransaction(
 	tx := txInfo.Transaction
 
 	isScCall := core.IsSmartContractAddress(tx.RcvAddr)
-	res := dtb.dataFieldParser.Parse(tx.Data, tx.SndAddr, tx.RcvAddr, headerData.NumberOfShards)
+	res := dtb.dataFieldParser.Parse(tx.Data, tx.SndAddr, tx.RcvAddr, headerData.NumberOfShards, headerData.Epoch)
 
 	receiverAddr := dtb.addressPubkeyConverter.SilentEncode(tx.RcvAddr, log)
 	senderAddr := dtb.addressPubkeyConverter.SilentEncode(tx.SndAddr, log)
