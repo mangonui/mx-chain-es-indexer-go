@@ -28,6 +28,8 @@ type DatabaseClientHandler interface {
 	CheckAndCreateAlias(alias string, index string) error
 	CheckAndCreateTemplate(templateName string, template *bytes.Buffer) error
 	CheckAndCreatePolicy(policyName string, policy *bytes.Buffer) error
+	SetWriteIndexTrue(alias string, index string) error
+	PolicyExists(policy string) bool
 
 	IsInterfaceNil() bool
 }
