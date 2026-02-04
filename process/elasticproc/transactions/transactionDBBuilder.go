@@ -37,7 +37,7 @@ func newTransactionDBBuilder(
 }
 
 func (dtb *dbTransactionBuilder) prepareUnexecutableTransaction(txHashHex string, tx *transaction.Transaction, headerData *data.HeaderData) *data.Transaction {
-	res := dtb.dataFieldParser.Parse(tx.Data, tx.SndAddr, tx.RcvAddr, headerData.NumberOfShards)
+	res := dtb.dataFieldParser.Parse(tx.Data, tx.SndAddr, tx.RcvAddr, headerData.NumberOfShards, headerData.Epoch)
 	receiversAddr, _ := dtb.addressPubkeyConverter.EncodeSlice(res.Receivers)
 
 	valueNum, err := dtb.balanceConverter.ConvertBigValueToFloat(tx.Value)
