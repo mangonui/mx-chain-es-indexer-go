@@ -246,6 +246,12 @@ var Blocks = Object{
 					"index": "false",
 					"type":  "long",
 				},
+				"lastExecutionResultHash": Object{
+					"type": "keyword",
+				},
+				"lastExecutionResultNonce": Object{
+					"type": "long",
+				},
 			},
 		},
 	},

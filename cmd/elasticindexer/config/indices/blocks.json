@@ -252,6 +252,12 @@
         "validators": {
           "index": "false",
           "type": "long"
+        },
+        "lastExecutionResultHash": {
+          "type": "keyword"
+        },
+        "lastExecutionResultNonce": {
+          "type": "long"
         }
       }
     }
