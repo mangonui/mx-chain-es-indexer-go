@@ -27,13 +27,6 @@ import (
 
 var (
 	log = logger.GetOrCreate("indexer/process")
-
-	indexes = []string{
-		elasticIndexer.TransactionsIndex, elasticIndexer.BlockIndex, elasticIndexer.MiniblocksIndex, elasticIndexer.RatingIndex, elasticIndexer.RoundsIndex, elasticIndexer.ValidatorsIndex,
-		elasticIndexer.AccountsIndex, elasticIndexer.AccountsHistoryIndex, elasticIndexer.ReceiptsIndex, elasticIndexer.ScResultsIndex, elasticIndexer.AccountsESDTHistoryIndex, elasticIndexer.AccountsESDTIndex,
-		elasticIndexer.EpochInfoIndex, elasticIndexer.SCDeploysIndex, elasticIndexer.TokensIndex, elasticIndexer.TagsIndex, elasticIndexer.LogsIndex, elasticIndexer.DelegatorsIndex, elasticIndexer.OperationsIndex,
-		elasticIndexer.ESDTsIndex, elasticIndexer.ValuesIndex, elasticIndexer.EventsIndex, elasticIndexer.ExecutionResultsIndex,
-	}
 )
 
 const (
@@ -522,122 +515,82 @@ func (ei *elasticProcessor) prepareAndSaveTransactionsData(
 	preparedResults := ei.transactionsProc.PrepareTransactionsForDatabase(miniBlocks, headerData, pool, ei.isImportDB())
 	logsData := ei.logsAndEventsProc.ExtractDataFromLogs(pool.Logs, preparedResults, headerData.ShardID, headerData.NumberOfShards, headerData.TimestampMs)
 
-	var wg sync.WaitGroup
-	errCh := make(chan error, 4)
-
-	// Create separate buffer slices for parallel groups to avoid race conditions
-	buffGroup1 := data.NewBufferSlice(ei.bulkRequestMaxSize)
-	buffGroup2 := data.NewBufferSlice(ei.bulkRequestMaxSize)
-	buffGroup3 := data.NewBufferSlice(ei.bulkRequestMaxSize)
-	buffGroup4 := data.NewBufferSlice(ei.bulkRequestMaxSize)
-
-	// Group 1: Transactions, Operations, Fees, ScResults, Receipts, ScDeploys (CPU heavy)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := ei.indexTransactions(preparedResults.Transactions, logsData.TxHashStatusInfo, headerData.ShardID, buffGroup1); err != nil {
-			errCh <- err
-			return
-		}
-		if err := ei.prepareAndIndexOperations(preparedResults.Transactions, logsData.TxHashStatusInfo, headerData.ShardID, preparedResults.ScResults, buffGroup1, ei.isImportDB()); err != nil {
-			errCh <- err
-			return
-		}
-		if err := ei.indexTransactionsFeeData(preparedResults.TxHashFee, buffGroup1); err != nil {
-			errCh <- err
-			return
-		}
-		if err := ei.indexScResults(preparedResults.ScResults, buffGroup1); err != nil {
-			errCh <- err
-			return
-		}
-		if err := ei.indexReceipts(preparedResults.Receipts, buffGroup1); err != nil {
-			errCh <- err
-			return
-		}
-		if err := ei.indexScDeploys(logsData.ScDeploys, logsData.ChangeOwnerOperations, buffGroup1); err != nil {
-			errCh <- err
-			return
-		}
-	}()
-
-	// Group 2: Logs, Events, Delegators (CPU heavy)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := ei.indexLogs(logsData.DBLogs, buffGroup2); err != nil {
-			errCh <- err
-			return
-		}
-		if err := ei.indexEvents(logsData.DBEvents, buffGroup2); err != nil {
-			errCh <- err
-			return
-		}
-		if err := ei.prepareAndIndexDelegators(logsData.Delegators, buffGroup2); err != nil {
-			errCh <- err
-			return
-		}
-	}()
-
-	// Group 3: Tokens related (Involves MultiGet IO + CPU)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := ei.indexNFTCreateInfo(logsData.Tokens, alteredAccounts, buffGroup3, headerData.ShardID); err != nil {
-			errCh <- err
-			return
-		}
-		if err := ei.indexTokens(logsData.TokensInfo, logsData.NFTsDataUpdates, buffGroup3, headerData.ShardID); err != nil {
-			errCh <- err
-			return
-		}
-		if err := ei.indexNFTBurnInfo(logsData.TokensSupply, buffGroup3, headerData.ShardID); err != nil {
-			errCh <- err
-			return
-		}
-		if err := ei.prepareAndIndexRolesData(logsData.TokenRolesAndProperties, buffGroup3, elasticIndexer.TokensIndex); err != nil {
-			errCh <- err
-			return
-		}
-		if err := ei.prepareAndIndexRolesData(logsData.TokenRolesAndProperties, buffGroup3, elasticIndexer.ESDTsIndex); err != nil {
-			errCh <- err
-			return
-		}
-	}()
-
-	// Group 4: Accounts related (Involves MultiGet IO + CPU)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		tagsCount := tags.NewTagsCount()
-		if err := ei.indexAlteredAccounts(logsData.NFTsDataUpdates, alteredAccounts, buffGroup4, tagsCount, headerData.ShardID, headerData.TimestampMs); err != nil {
-			errCh <- err
-			return
-		}
-		if err := ei.prepareAndIndexTagsCount(tagsCount, buffGroup4); err != nil {
-			errCh <- err
-			return
-		}
-	}()
-
-	wg.Wait()
-	close(errCh)
-
-	var errs []error
-	for err := range errCh {
-		errs = append(errs, err)
-	}
-	if len(errs) > 0 {
-		return errors.Join(errs...)
+	err := ei.indexTransactions(preparedResults.Transactions, logsData.TxHashStatusInfo, headerData.ShardID, buffers)
+	if err != nil {
+		return err
 	}
 
-	// Merge all buffers
-	buffers.Merge(buffGroup1)
-	buffers.Merge(buffGroup2)
-	buffers.Merge(buffGroup3)
-	buffers.Merge(buffGroup4)
+	err = ei.prepareAndIndexOperations(preparedResults.Transactions, logsData.TxHashStatusInfo, headerData.ShardID, preparedResults.ScResults, buffers, ei.isImportDB())
+	if err != nil {
+		return err
+	}
 
-	return nil
+	err = ei.indexTransactionsFeeData(preparedResults.TxHashFee, buffers)
+	if err != nil {
+		return err
+	}
+
+	err = ei.indexNFTCreateInfo(logsData.Tokens, alteredAccounts, buffers, headerData.ShardID)
+	if err != nil {
+		return err
+	}
+
+	err = ei.indexLogs(logsData.DBLogs, buffers)
+	if err != nil {
+		return err
+	}
+
+	err = ei.indexEvents(logsData.DBEvents, buffers)
+	if err != nil {
+		return err
+	}
+
+	err = ei.indexScResults(preparedResults.ScResults, buffers)
+	if err != nil {
+		return err
+	}
+
+	err = ei.indexReceipts(preparedResults.Receipts, buffers)
+	if err != nil {
+		return err
+	}
+
+	tagsCount := tags.NewTagsCount()
+	err = ei.indexAlteredAccounts(logsData.NFTsDataUpdates, alteredAccounts, buffers, tagsCount, headerData.ShardID, headerData.TimestampMs)
+	if err != nil {
+		return err
+	}
+
+	err = ei.prepareAndIndexTagsCount(tagsCount, buffers)
+	if err != nil {
+		return err
+	}
+
+	err = ei.indexTokens(logsData.TokensInfo, logsData.NFTsDataUpdates, buffers, headerData.ShardID)
+	if err != nil {
+		return err
+	}
+
+	err = ei.prepareAndIndexDelegators(logsData.Delegators, buffers)
+	if err != nil {
+		return err
+	}
+
+	err = ei.indexNFTBurnInfo(logsData.TokensSupply, buffers, headerData.ShardID)
+	if err != nil {
+		return err
+	}
+
+	err = ei.prepareAndIndexRolesData(logsData.TokenRolesAndProperties, buffers, elasticIndexer.TokensIndex)
+	if err != nil {
+		return err
+	}
+	err = ei.prepareAndIndexRolesData(logsData.TokenRolesAndProperties, buffers, elasticIndexer.ESDTsIndex)
+	if err != nil {
+		return err
+	}
+
+	return ei.indexScDeploys(logsData.ScDeploys, logsData.ChangeOwnerOperations, buffers)
 }
 
 func (ei *elasticProcessor) prepareAndIndexRolesData(tokenRolesAndProperties *tokeninfo.TokenRolesAndProperties, buffSlice *data.BufferSlice, index string) error {

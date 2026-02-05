@@ -61,33 +61,6 @@ func (bs *BufferSlice) Buffers() []*bytes.Buffer {
 	return bs.buffSlice
 }
 
-// Merge merges another BufferSlice into this one.
-func (bs *BufferSlice) Merge(other *BufferSlice) {
-	if other == nil || len(other.buffSlice) == 0 {
-		return
-	}
-
-	if len(bs.buffSlice) == 0 {
-		bs.buffSlice = append(bs.buffSlice, &bytes.Buffer{})
-		bs.idx = 0
-	}
-
-	for _, src := range other.buffSlice {
-		if src.Len() == 0 {
-			continue
-		}
-
-		dst := bs.buffSlice[bs.idx]
-		if dst.Len() > 0 && dst.Len()+src.Len() > bs.bulkSizeThreshold {
-			dst = &bytes.Buffer{}
-			bs.buffSlice = append(bs.buffSlice, dst)
-			bs.idx++
-		}
-
-		_, _ = dst.ReadFrom(src)
-	}
-}
-
 func (bs *BufferSlice) aNewElementIsNeeded(meta []byte, serializedData []byte) bool {
 	currentBuff := bs.buffSlice[bs.idx]
 
