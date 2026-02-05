@@ -1,13 +1,10 @@
 package client
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/elastic/go-elasticsearch/v7/esapi"
@@ -207,24 +204,6 @@ func isErrAliasAlreadyExists(response map[string]interface{}) bool {
 	}
 
 	return existsString == aliasExistsMessage
-}
-
-func newRequest(method, path string, body *bytes.Buffer) *http.Request {
-	r := http.Request{
-		Method:     method,
-		URL:        &url.URL{Path: path},
-		Proto:      "HTTP/1.1",
-		ProtoMajor: 1,
-		ProtoMinor: 1,
-		Header:     make(http.Header),
-	}
-
-	if body != nil {
-		r.Body = ioutil.NopCloser(body)
-		r.ContentLength = int64(body.Len())
-	}
-
-	return &r
 }
 
 /**
