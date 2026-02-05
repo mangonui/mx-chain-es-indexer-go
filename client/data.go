@@ -1,9 +1,6 @@
 package client
 
 const (
-	headerXSRF                       = "kbn-xsrf"
-	headerContentType                = "Content-Type"
-	kibanaPluginPath                 = "_plugin/kibana/api"
 	numOfErrorsToExtractBulkResponse = 5
 )
 
