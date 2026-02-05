@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
 
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
@@ -27,8 +26,7 @@ type (
 )
 
 type elasticClient struct {
-	elasticBaseUrl string
-	client         *elasticsearch.Client
+	client *elasticsearch.Client
 
 	// countScroll is used to be incremented after each scroll so the scroll duration is different each time,
 	// bypassing any possible caching based on the same request
@@ -47,8 +45,7 @@ func NewElasticClient(cfg elasticsearch.Config) (*elasticClient, error) {
 	}
 
 	ec := &elasticClient{
-		client:         es,
-		elasticBaseUrl: cfg.Addresses[0],
+		client: es,
 	}
 
 	return ec, nil
@@ -239,15 +236,7 @@ func (ec *elasticClient) PolicyExists(policy string) bool {
 	res, err := ec.client.ILM.GetLifecycle(
 		ec.client.ILM.GetLifecycle.WithPolicy(policy),
 	)
-	if err != nil {
-		log.Warn("elasticClient.PolicyExists", "error", err.Error())
-		return false
-	}
-	if res.StatusCode == http.StatusOK {
-		return true
-	}
-
-	return false
+	return exists(res, err)
 }
 
 // CreateIndex creates an elasticsearch index
@@ -335,9 +324,6 @@ func (ec *elasticClient) UpdateByQuery(ctx context.Context, index string, buff *
 	)
 	if err != nil {
 		return err
-	}
-	if res.IsError() {
-		return fmt.Errorf("update by query failed for index %s: %s", index, res.String())
 	}
 
 	return parseResponse(res, nil, elasticDefaultErrorResponseHandler)
