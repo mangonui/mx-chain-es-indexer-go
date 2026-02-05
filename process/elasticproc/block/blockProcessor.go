@@ -137,16 +137,37 @@ func (bp *blockProcessor) PrepareBlockForDB(obh *outport.OutportBlockWithHeader)
 
 	bp.addEpochStartInfoForMeta(obh.Header, elasticBlock)
 
-	elasticBlock.MiniBlocksDetails = prepareMiniBlockDetails(obh.Header.GetMiniBlockHeaderHandlers(), obh.BlockData.Body, obh.TransactionPool)
+	areProposedMBs := obh.Header.IsHeaderV3()
+	elasticBlock.MiniBlocksDetails = prepareMiniBlockDetails(obh.Header.GetMiniBlockHeaderHandlers(), obh.BlockData.Body, obh.TransactionPool, areProposedMBs)
 
 	appendBlockDetailsFromIntraShardMbs(elasticBlock, obh.BlockData.IntraShardMiniBlocks, obh.TransactionPool, len(obh.Header.GetMiniBlockHeaderHandlers()))
 
+	addInBlockLastExecutionResultData(elasticBlock, obh)
 	addProofs(elasticBlock, obh)
 
 	return &data.PreparedBlockResults{
 		Block:            elasticBlock,
 		ExecutionResults: bp.prepareExecutionResults(obh),
 	}, nil
+}
+
+func addInBlockLastExecutionResultData(elasticBlock *data.Block, obh *outport.OutportBlockWithHeader) {
+	lastExecutionResult := obh.Header.GetLastExecutionResultHandler()
+	if check.IfNil(lastExecutionResult) {
+		return
+	}
+
+	switch t := lastExecutionResult.(type) {
+	case *nodeBlock.ExecutionResultInfo:
+		elasticBlock.LastExecutionResultHash = hex.EncodeToString(t.ExecutionResult.GetHeaderHash())
+		elasticBlock.LastExecutionResultNonce = t.ExecutionResult.GetHeaderNonce()
+
+	case *nodeBlock.MetaExecutionResultInfo:
+		elasticBlock.LastExecutionResultHash = hex.EncodeToString(t.ExecutionResult.GetHeaderHash())
+		elasticBlock.LastExecutionResultNonce = t.ExecutionResult.GetHeaderNonce()
+	default:
+		return
+	}
 }
 
 func (bp *blockProcessor) prepareExecutionResults(obh *outport.OutportBlockWithHeader) []*data.ExecutionResult {
@@ -188,12 +209,12 @@ func (bp *blockProcessor) prepareExecutionResult(baseExecutionResult coreData.Ba
 
 	switch t := baseExecutionResult.(type) {
 	case *nodeBlock.MetaExecutionResult:
-		executionResult.MiniBlocksDetails = prepareMiniBlockDetails(t.GetMiniBlockHeadersHandlers(), executionResultData.Body, executionResultData.TransactionPool)
+		executionResult.MiniBlocksDetails = prepareMiniBlockDetails(t.GetMiniBlockHeadersHandlers(), executionResultData.Body, executionResultData.TransactionPool, false)
 		executionResult.AccumulatedFees = t.AccumulatedFees.String()
 		executionResult.DeveloperFees = t.DeveloperFees.String()
 		executionResult.TxCount = t.ExecutedTxCount
 	case *nodeBlock.ExecutionResult:
-		executionResult.MiniBlocksDetails = prepareMiniBlockDetails(t.GetMiniBlockHeadersHandlers(), executionResultData.Body, executionResultData.TransactionPool)
+		executionResult.MiniBlocksDetails = prepareMiniBlockDetails(t.GetMiniBlockHeadersHandlers(), executionResultData.Body, executionResultData.TransactionPool, false)
 		executionResult.AccumulatedFees = t.AccumulatedFees.String()
 		executionResult.DeveloperFees = t.DeveloperFees.String()
 		executionResult.TxCount = t.ExecutedTxCount
@@ -243,19 +264,19 @@ func getTxsCount(header coreData.HeaderHandler) (numTxs, notarizedTxs uint32) {
 		return numTxs, notarizedTxs
 	}
 
-	metaHeader, ok := header.(*nodeBlock.MetaBlock)
+	metaHeader, ok := header.(coreData.MetaHeaderHandler)
 	if !ok {
 		return 0, 0
 	}
 
-	notarizedTxs = metaHeader.TxCount
+	notarizedTxs = metaHeader.GetTxCount()
 	numTxs = 0
-	for _, mb := range metaHeader.MiniBlockHeaders {
-		if mb.Type == nodeBlock.PeerBlock {
+	for _, mb := range metaHeader.GetMiniBlockHeaderHandlers() {
+		if mb.GetTypeInt32() == int32(nodeBlock.PeerBlock) {
 			continue
 		}
 
-		numTxs += mb.TxCount
+		numTxs += mb.GetTxCount()
 	}
 
 	notarizedTxs = notarizedTxs - numTxs
@@ -268,7 +289,7 @@ func (bp *blockProcessor) addEpochStartInfoForMeta(header coreData.HeaderHandler
 		return
 	}
 
-	metaHeader, ok := header.(*nodeBlock.MetaBlock)
+	metaHeader, ok := header.(coreData.MetaHeaderHandler)
 	if !ok {
 		return
 	}
@@ -277,55 +298,55 @@ func (bp *blockProcessor) addEpochStartInfoForMeta(header coreData.HeaderHandler
 		return
 	}
 
-	metaHeaderEconomics := metaHeader.EpochStart.Economics
+	metaHeaderEconomics := metaHeader.GetEpochStartHandler().GetEconomicsHandler()
 
 	block.EpochStartInfo = &data.EpochStartInfo{
-		TotalSupply:                      metaHeaderEconomics.TotalSupply.String(),
-		TotalToDistribute:                metaHeaderEconomics.TotalToDistribute.String(),
-		TotalNewlyMinted:                 metaHeaderEconomics.TotalNewlyMinted.String(),
-		RewardsPerBlock:                  metaHeaderEconomics.RewardsPerBlock.String(),
-		RewardsForProtocolSustainability: metaHeaderEconomics.RewardsForProtocolSustainability.String(),
-		NodePrice:                        metaHeaderEconomics.NodePrice.String(),
-		PrevEpochStartRound:              metaHeaderEconomics.PrevEpochStartRound,
-		PrevEpochStartHash:               hex.EncodeToString(metaHeaderEconomics.PrevEpochStartHash),
+		TotalSupply:                      metaHeaderEconomics.GetTotalSupply().String(),
+		TotalToDistribute:                metaHeaderEconomics.GetTotalToDistribute().String(),
+		TotalNewlyMinted:                 metaHeaderEconomics.GetTotalNewlyMinted().String(),
+		RewardsPerBlock:                  metaHeaderEconomics.GetRewardsPerBlock().String(),
+		RewardsForProtocolSustainability: metaHeaderEconomics.GetRewardsForProtocolSustainability().String(),
+		NodePrice:                        metaHeaderEconomics.GetNodePrice().String(),
+		PrevEpochStartRound:              metaHeaderEconomics.GetPrevEpochStartRound(),
+		PrevEpochStartHash:               hex.EncodeToString(metaHeaderEconomics.GetPrevEpochStartHash()),
 	}
-	if len(metaHeader.EpochStart.LastFinalizedHeaders) == 0 {
+	if len(metaHeader.GetEpochStartHandler().GetLastFinalizedHeaderHandlers()) == 0 {
 		return
 	}
 
-	epochStartShardsData := metaHeader.EpochStart.LastFinalizedHeaders
-	block.EpochStartShardsData = make([]*data.EpochStartShardData, 0, len(metaHeader.EpochStart.LastFinalizedHeaders))
-	for _, epochStartShardData := range epochStartShardsData {
-		bp.addEpochStartShardDataForMeta(epochStartShardData, block)
+	epochStartShardsData := metaHeader.GetEpochStartHandler().GetLastFinalizedHeaderHandlers()
+	block.EpochStartShardsData = make([]*data.EpochStartShardData, 0, len(epochStartShardsData))
+	for _, epochStartShardDataHandler := range epochStartShardsData {
+		bp.addEpochStartShardDataForMeta(epochStartShardDataHandler, block)
 	}
 }
 
-func (bp *blockProcessor) addEpochStartShardDataForMeta(epochStartShardData nodeBlock.EpochStartShardData, block *data.Block) {
+func (bp *blockProcessor) addEpochStartShardDataForMeta(epochStartShardData coreData.EpochStartShardDataHandler, block *data.Block) {
 	shardData := &data.EpochStartShardData{
-		ShardID:               epochStartShardData.ShardID,
-		Epoch:                 epochStartShardData.Epoch,
-		Round:                 epochStartShardData.Round,
-		Nonce:                 epochStartShardData.Nonce,
-		HeaderHash:            hex.EncodeToString(epochStartShardData.HeaderHash),
-		RootHash:              hex.EncodeToString(epochStartShardData.RootHash),
-		ScheduledRootHash:     hex.EncodeToString(epochStartShardData.ScheduledRootHash),
-		FirstPendingMetaBlock: hex.EncodeToString(epochStartShardData.FirstPendingMetaBlock),
-		LastFinishedMetaBlock: hex.EncodeToString(epochStartShardData.LastFinishedMetaBlock),
+		ShardID:               epochStartShardData.GetShardID(),
+		Epoch:                 epochStartShardData.GetEpoch(),
+		Round:                 epochStartShardData.GetRound(),
+		Nonce:                 epochStartShardData.GetNonce(),
+		HeaderHash:            hex.EncodeToString(epochStartShardData.GetHeaderHash()),
+		RootHash:              hex.EncodeToString(epochStartShardData.GetRootHash()),
+		ScheduledRootHash:     hex.EncodeToString(epochStartShardData.GetScheduledRootHash()),
+		FirstPendingMetaBlock: hex.EncodeToString(epochStartShardData.GetFirstPendingMetaBlock()),
+		LastFinishedMetaBlock: hex.EncodeToString(epochStartShardData.GetLastFinishedMetaBlock()),
 	}
 
-	if len(epochStartShardData.PendingMiniBlockHeaders) == 0 {
+	if len(epochStartShardData.GetPendingMiniBlockHeaderHandlers()) == 0 {
 		block.EpochStartShardsData = append(block.EpochStartShardsData, shardData)
 		return
 	}
 
-	shardData.PendingMiniBlockHeaders = make([]*data.Miniblock, 0, len(epochStartShardData.PendingMiniBlockHeaders))
-	for _, pendingMb := range epochStartShardData.PendingMiniBlockHeaders {
+	shardData.PendingMiniBlockHeaders = make([]*data.Miniblock, 0, len(epochStartShardData.GetPendingMiniBlockHeaderHandlers()))
+	for _, pendingMb := range epochStartShardData.GetPendingMiniBlockHeaderHandlers() {
 		shardData.PendingMiniBlockHeaders = append(shardData.PendingMiniBlockHeaders, &data.Miniblock{
-			Hash:            hex.EncodeToString(pendingMb.Hash),
-			SenderShardID:   pendingMb.SenderShardID,
-			ReceiverShardID: pendingMb.ReceiverShardID,
-			Type:            pendingMb.Type.String(),
-			Reserved:        pendingMb.Reserved,
+			Hash:            hex.EncodeToString(pendingMb.GetHash()),
+			SenderShardID:   pendingMb.GetSenderShardID(),
+			ReceiverShardID: pendingMb.GetReceiverShardID(),
+			Type:            nodeBlock.Type(pendingMb.GetTypeInt32()).String(),
+			Reserved:        pendingMb.GetReserved(),
 		})
 	}
 
@@ -360,7 +381,7 @@ func (bp *blockProcessor) getEncodedMBSHashes(body *nodeBlock.Body, intraShardMb
 	return miniblocksHashes
 }
 
-func prepareMiniBlockDetails(mbHeaders []coreData.MiniBlockHeaderHandler, body *nodeBlock.Body, pool *outport.TransactionPool) []*data.MiniBlocksDetails {
+func prepareMiniBlockDetails(mbHeaders []coreData.MiniBlockHeaderHandler, body *nodeBlock.Body, pool *outport.TransactionPool, areProposed bool) []*data.MiniBlocksDetails {
 	mbsDetails := make([]*data.MiniBlocksDetails, 0, len(mbHeaders))
 	for idx, mbHeader := range mbHeaders {
 		mbType := nodeBlock.Type(mbHeader.GetTypeInt32())
@@ -369,17 +390,22 @@ func prepareMiniBlockDetails(mbHeaders []coreData.MiniBlockHeaderHandler, body *
 		}
 
 		txsHashes := body.MiniBlocks[idx].TxHashes
-		mbsDetails = append(mbsDetails, &data.MiniBlocksDetails{
-			IndexFirstProcessedTx:    mbHeader.GetIndexOfFirstTxProcessed(),
-			IndexLastProcessedTx:     mbHeader.GetIndexOfLastTxProcessed(),
-			MBIndex:                  idx,
-			ProcessingType:           nodeBlock.ProcessingType(mbHeader.GetProcessingType()).String(),
-			Type:                     mbType.String(),
-			SenderShardID:            mbHeader.GetSenderShardID(),
-			ReceiverShardID:          mbHeader.GetReceiverShardID(),
-			TxsHashes:                hexEncodeSlice(txsHashes),
-			ExecutionOrderTxsIndices: extractExecutionOrderIndicesFromPool(mbHeader, txsHashes, pool),
-		})
+		mbDetails := &data.MiniBlocksDetails{
+			IndexFirstProcessedTx: mbHeader.GetIndexOfFirstTxProcessed(),
+			IndexLastProcessedTx:  mbHeader.GetIndexOfLastTxProcessed(),
+			MBIndex:               idx,
+			ProcessingType:        nodeBlock.ProcessingType(mbHeader.GetProcessingType()).String(),
+			Type:                  mbType.String(),
+			SenderShardID:         mbHeader.GetSenderShardID(),
+			ReceiverShardID:       mbHeader.GetReceiverShardID(),
+			TxsHashes:             hexEncodeSlice(txsHashes),
+		}
+		if !areProposed {
+			mbDetails.ExecutionOrderTxsIndices = extractExecutionOrderIndicesFromPool(mbHeader, txsHashes, pool)
+		}
+
+		mbsDetails = append(mbsDetails, mbDetails)
+
 	}
 
 	return mbsDetails

@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/elastic/go-elasticsearch/v7/esapi"
-	"github.com/multiversx/mx-chain-es-indexer-go/data"
 	"github.com/multiversx/mx-chain-es-indexer-go/process/dataindexer"
 )
 
@@ -208,28 +207,6 @@ func isErrAliasAlreadyExists(response map[string]interface{}) bool {
 	}
 
 	return existsString == aliasExistsMessage
-}
-
-func kibanaResponseErrorHandler(res *esapi.Response) error {
-	errorRes := &data.Response{}
-	decodeErr := loadResponseBody(res.Body, errorRes)
-	if decodeErr != nil {
-		return decodeErr
-	}
-
-	errStr := fmt.Sprintf("%v", errorRes.Error)
-	if errorRes.Status == http.StatusConflict && strings.Contains(errStr, errPolicyAlreadyExists) {
-		return nil
-	}
-
-	if errorRes.Error == nil && errorRes.Status < http.StatusBadRequest {
-		return nil
-	}
-
-	log.Warn("elasticClient.parseResponse",
-		"error returned by elastic API", errorRes.Error,
-		"code", res.StatusCode)
-	return dataindexer.ErrBackOff
 }
 
 func newRequest(method, path string, body *bytes.Buffer) *http.Request {

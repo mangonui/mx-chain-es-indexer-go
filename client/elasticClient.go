@@ -7,11 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
-	"github.com/multiversx/mx-chain-es-indexer-go/data"
 	"github.com/multiversx/mx-chain-es-indexer-go/process/dataindexer"
 	logger "github.com/multiversx/mx-chain-logger-go"
 )
@@ -74,6 +72,26 @@ func (ec *elasticClient) CheckAndCreatePolicy(policyName string, policy *bytes.B
 	}
 
 	return ec.createPolicy(policyName, policy)
+}
+
+// SetWriteIndexTrue will set the provided index as write index
+func (ec *elasticClient) SetWriteIndexTrue(alias string, index string) error {
+	body := fmt.Sprintf(`{"actions" : [ { "add" : { "index" : "%s", "alias" : "%s",  "is_write_index" : true } }]}`, index, alias)
+	res, err := ec.client.Indices.UpdateAliases(
+		bytes.NewBuffer([]byte(body)),
+	)
+	if err != nil {
+		return err
+	}
+
+	defer closeBody(res)
+
+	if res.IsError() {
+		return fmt.Errorf("%s", res.String())
+	}
+
+	return nil
+
 }
 
 // CheckAndCreateIndex creates a new index if it does not already exist
@@ -224,36 +242,18 @@ func (ec *elasticClient) indexExists(index string) bool {
 
 // PolicyExists checks if a policy was already created
 func (ec *elasticClient) PolicyExists(policy string) bool {
-	policyRoute := fmt.Sprintf(
-		"%s/%s/ism/policies/%s",
-		ec.elasticBaseUrl,
-		kibanaPluginPath,
-		policy,
+	res, err := ec.client.ILM.GetLifecycle(
+		ec.client.ILM.GetLifecycle.WithPolicy(policy),
 	)
-
-	req := newRequest(http.MethodGet, policyRoute, nil)
-	res, err := ec.client.Transport.Perform(req)
 	if err != nil {
-		log.Warn("elasticClient.PolicyExists",
-			"error performing request", err.Error())
+		log.Warn("elasticClient.PolicyExists", "error", err.Error())
 		return false
 	}
-
-	response := &esapi.Response{
-		StatusCode: res.StatusCode,
-		Body:       res.Body,
-		Header:     res.Header,
+	if res.StatusCode == http.StatusOK {
+		return true
 	}
 
-	existsRes := &data.Response{}
-	err = parseResponse(response, existsRes, kibanaResponseErrorHandler)
-	if err != nil {
-		log.Warn("elasticClient.PolicyExists",
-			"error returned by kibana api", err.Error())
-		return false
-	}
-
-	return existsRes.Status == http.StatusConflict
+	return false
 }
 
 // AliasExists checks if an index alias already exists
@@ -292,38 +292,15 @@ func (ec *elasticClient) createIndex(index string) error {
 
 // CreatePolicy creates a new policy for elastic indexes. Policies define rollover parameters
 func (ec *elasticClient) createPolicy(policyName string, policy *bytes.Buffer) error {
-	policyRoute := fmt.Sprintf(
-		"%s/_opendistro/_ism/policies/%s",
-		ec.elasticBaseUrl,
+	res, err := ec.client.ILM.PutLifecycle(
 		policyName,
+		ec.client.ILM.PutLifecycle.WithBody(policy),
 	)
-
-	req := newRequest(http.MethodPut, policyRoute, policy)
-	req.Header[headerContentType] = headerContentTypeJSON
-	req.Header[headerXSRF] = []string{"false"}
-	res, err := ec.client.Transport.Perform(req)
 	if err != nil {
 		return err
 	}
 
-	response := &esapi.Response{
-		StatusCode: res.StatusCode,
-		Body:       res.Body,
-		Header:     res.Header,
-	}
-
-	existsRes := &data.Response{}
-	err = parseResponse(response, existsRes, kibanaResponseErrorHandler)
-	if err != nil {
-		return err
-	}
-
-	errStr := fmt.Sprintf("%v", existsRes.Error)
-	if existsRes.Status == http.StatusConflict && !strings.Contains(errStr, errPolicyAlreadyExists) {
-		return dataindexer.ErrCouldNotCreatePolicy
-	}
-
-	return nil
+	return parseResponse(res, nil, elasticDefaultErrorResponseHandler)
 }
 
 // CreateIndexTemplate creates an elasticsearch index template

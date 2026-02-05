@@ -27,18 +27,25 @@ type ArgElasticProcessorFactory struct {
 	ValidatorPubkeyConverter core.PubkeyConverter
 	DBClient                 elasticproc.DatabaseClientHandler
 	EnabledIndexes           []string
+	IndicesWithPolicy        []string
 	Version                  string
 	Denomination             int
 	BulkRequestMaxSize       int
 	NumWritesInParallel      int
-	UseKibana                bool
 	ImportDB                 bool
 	EnableEpochsConfig       config.EnableEpochsConfig
+	UseTemplatesFromFiles    bool
+	ConfigPath               string
 }
 
 // CreateElasticProcessor will create a new instance of ElasticProcessor
 func CreateElasticProcessor(arguments ArgElasticProcessorFactory) (dataindexer.ElasticProcessor, error) {
-	templatesAndPoliciesReader := templatesAndPolicies.NewTemplatesAndPolicyReader()
+	templatesAndPoliciesReader := templatesAndPolicies.NewTemplatesAndPolicyReader(
+		arguments.UseTemplatesFromFiles,
+		arguments.ConfigPath,
+		arguments.EnabledIndexes,
+		arguments.IndicesWithPolicy,
+	)
 
 	enabledIndexesMap := make(map[string]struct{})
 	for _, index := range arguments.EnabledIndexes {
@@ -116,7 +123,6 @@ func CreateElasticProcessor(arguments ArgElasticProcessorFactory) (dataindexer.E
 		LogsAndEventsProc:   logsAndEventsProc,
 		DBClient:            arguments.DBClient,
 		EnabledIndexes:      enabledIndexesMap,
-		UseKibana:           arguments.UseKibana,
 		OperationsProc:      operationsProc,
 		ImportDB:            arguments.ImportDB,
 		Version:             arguments.Version,

@@ -43,8 +43,9 @@ func NewTransactionsProcessor(args *ArgsTransactionProcessor) (*txsDatabaseProce
 	}
 
 	argsParser := &datafield.ArgsOperationDataFieldParser{
-		AddressLength: args.AddressPubkeyConverter.Len(),
-		Marshalizer:   args.Marshalizer,
+		AddressLength:                       args.AddressPubkeyConverter.Len(),
+		Marshalizer:                         args.Marshalizer,
+		RelayedTransactionsV1V2DisableEpoch: args.EnableEpochsConfig.RelayedTransactionsV1V2DisableEpoch,
 	}
 	operationsDataParser, err := datafield.NewOperationDataFieldParser(argsParser)
 	if err != nil {
@@ -115,6 +116,15 @@ func (tdp *txsDatabaseProcessor) PrepareTransactionsForDatabase(
 		default:
 			continue
 		}
+	}
+
+	for hashHex, tx := range pool.UnexecutableTransactions {
+		decodedHash, errD := hex.DecodeString(hashHex)
+		if errD != nil {
+			continue
+		}
+
+		normalTxs[string(decodedHash)] = tdp.txBuilder.prepareUnexecutableTransaction(hashHex, tx, headerData)
 	}
 
 	normalTxs = tdp.setTransactionSearchOrder(normalTxs)
