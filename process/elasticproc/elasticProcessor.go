@@ -27,13 +27,6 @@ import (
 
 var (
 	log = logger.GetOrCreate("indexer/process")
-
-	indexes = []string{
-		elasticIndexer.TransactionsIndex, elasticIndexer.BlockIndex, elasticIndexer.MiniblocksIndex, elasticIndexer.RatingIndex, elasticIndexer.RoundsIndex, elasticIndexer.ValidatorsIndex,
-		elasticIndexer.AccountsIndex, elasticIndexer.AccountsHistoryIndex, elasticIndexer.ReceiptsIndex, elasticIndexer.ScResultsIndex, elasticIndexer.AccountsESDTHistoryIndex, elasticIndexer.AccountsESDTIndex,
-		elasticIndexer.EpochInfoIndex, elasticIndexer.SCDeploysIndex, elasticIndexer.TokensIndex, elasticIndexer.TagsIndex, elasticIndexer.LogsIndex, elasticIndexer.DelegatorsIndex, elasticIndexer.OperationsIndex,
-		elasticIndexer.ESDTsIndex, elasticIndexer.ValuesIndex, elasticIndexer.EventsIndex, elasticIndexer.ExecutionResultsIndex,
-	}
 )
 
 const (
@@ -519,7 +512,6 @@ func (ei *elasticProcessor) prepareAndSaveTransactionsData(
 	alteredAccounts map[string]*alteredAccount.AlteredAccount,
 	buffers *data.BufferSlice,
 ) error {
-
 	preparedResults := ei.transactionsProc.PrepareTransactionsForDatabase(miniBlocks, headerData, pool, ei.isImportDB())
 	logsData := ei.logsAndEventsProc.ExtractDataFromLogs(pool.Logs, preparedResults, headerData.ShardID, headerData.NumberOfShards, headerData.TimestampMs)
 
@@ -622,12 +614,21 @@ func (ei *elasticProcessor) indexTransactionsFeeData(txsHashFeeData map[string]*
 		return nil
 	}
 
-	err := ei.transactionsProc.SerializeTransactionsFeeData(txsHashFeeData, buffSlice, elasticIndexer.TransactionsIndex)
-	if err != nil {
-		return nil
+	if ei.isIndexEnabled(elasticIndexer.TransactionsIndex) {
+		err := ei.transactionsProc.SerializeTransactionsFeeData(txsHashFeeData, buffSlice, elasticIndexer.TransactionsIndex)
+		if err != nil {
+			return err
+		}
 	}
 
-	return ei.transactionsProc.SerializeTransactionsFeeData(txsHashFeeData, buffSlice, elasticIndexer.OperationsIndex)
+	if ei.isIndexEnabled(elasticIndexer.OperationsIndex) {
+		err := ei.transactionsProc.SerializeTransactionsFeeData(txsHashFeeData, buffSlice, elasticIndexer.OperationsIndex)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (ei *elasticProcessor) indexLogs(logsDB []*data.Logs, buffSlice *data.BufferSlice) error {

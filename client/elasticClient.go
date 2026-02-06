@@ -3,10 +3,8 @@ package client
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
-	"net/http"
 
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
@@ -17,8 +15,7 @@ import (
 // TODO add more unit tests
 
 const (
-	esConflictsPolicy      = "proceed"
-	errPolicyAlreadyExists = "document already exists"
+	esConflictsPolicy = "proceed"
 )
 
 var log = logger.GetOrCreate("indexer/client")
@@ -29,8 +26,7 @@ type (
 )
 
 type elasticClient struct {
-	elasticBaseUrl string
-	client         *elasticsearch.Client
+	client *elasticsearch.Client
 
 	// countScroll is used to be incremented after each scroll so the scroll duration is different each time,
 	// bypassing any possible caching based on the same request
@@ -49,8 +45,7 @@ func NewElasticClient(cfg elasticsearch.Config) (*elasticClient, error) {
 	}
 
 	ec := &elasticClient{
-		client:         es,
-		elasticBaseUrl: cfg.Addresses[0],
+		client: es,
 	}
 
 	return ec, nil
@@ -76,9 +71,9 @@ func (ec *elasticClient) CheckAndCreatePolicy(policyName string, policy *bytes.B
 
 // SetWriteIndexTrue will set the provided index as write index
 func (ec *elasticClient) SetWriteIndexTrue(alias string, index string) error {
-	body := fmt.Sprintf(`{"actions" : [ { "add" : { "index" : "%s", "alias" : "%s",  "is_write_index" : true } }]}`, index, alias)
+	body := fmt.Sprintf(`{"actions":[{"add":{"index":"%s","alias":"%s","is_write_index":true}}]}`, index, alias)
 	res, err := ec.client.Indices.UpdateAliases(
-		bytes.NewBuffer([]byte(body)),
+		bytes.NewBufferString(body),
 	)
 	if err != nil {
 		return err
@@ -87,11 +82,10 @@ func (ec *elasticClient) SetWriteIndexTrue(alias string, index string) error {
 	defer closeBody(res)
 
 	if res.IsError() {
-		return fmt.Errorf("%s", res.String())
+		return fmt.Errorf("failed to set write index for alias %s: %s", alias, res.String())
 	}
 
 	return nil
-
 }
 
 // CheckAndCreateIndex creates a new index if it does not already exist
@@ -113,11 +107,7 @@ func (ec *elasticClient) PutMappings(indexName string, mappings *bytes.Buffer) e
 		return err
 	}
 
-	if res.IsError() {
-		return errors.New(res.String())
-	}
-
-	return nil
+	return parseResponse(res, nil, elasticDefaultErrorResponseHandler)
 }
 
 // CheckAndCreateAlias creates a new alias if it does not already exist
@@ -131,9 +121,7 @@ func (ec *elasticClient) CheckAndCreateAlias(alias string, indexName string) err
 
 // DoBulkRequest will do a bulk of request to elastic server
 func (ec *elasticClient) DoBulkRequest(ctx context.Context, buff *bytes.Buffer, index string) error {
-	reader := bytes.NewReader(buff.Bytes())
-
-	options := make([]func(*esapi.BulkRequest), 0)
+	options := make([]func(*esapi.BulkRequest), 0, 2)
 	if index != "" {
 		options = append(options, ec.client.Bulk.WithIndex(index))
 	}
@@ -141,12 +129,11 @@ func (ec *elasticClient) DoBulkRequest(ctx context.Context, buff *bytes.Buffer, 
 	options = append(options, ec.client.Bulk.WithContext(ctx))
 
 	res, err := ec.client.Bulk(
-		reader,
+		buff,
 		options...,
 	)
 	if err != nil {
-		log.Warn("elasticClient.DoBulkRequest",
-			"indexer do bulk request no response", err.Error())
+		log.Warn("elasticClient.DoBulkRequest", "error", err.Error())
 		return err
 	}
 
@@ -167,15 +154,13 @@ func (ec *elasticClient) DoMultiGet(ctx context.Context, ids []string, index str
 		ec.client.Mget.WithContext(ctx),
 	)
 	if err != nil {
-		log.Warn("elasticClient.DoMultiGet",
-			"cannot do multi get no response", err.Error())
+		log.Warn("elasticClient.DoMultiGet", "error", err.Error())
 		return err
 	}
 
 	err = parseResponse(res, &resBody, elasticDefaultErrorResponseHandler)
 	if err != nil {
-		log.Warn("elasticClient.DoMultiGet",
-			"error parsing response", err.Error())
+		log.Warn("elasticClient.DoMultiGet", "error parsing response", err.Error())
 		return err
 	}
 
@@ -241,44 +226,17 @@ func (ec *elasticClient) indexExists(index string) bool {
 	return exists(res, err)
 }
 
+func (ec *elasticClient) aliasExists(alias string) bool {
+	res, err := ec.client.Indices.ExistsAlias([]string{alias})
+	return exists(res, err)
+}
+
 // PolicyExists checks if a policy was already created
 func (ec *elasticClient) PolicyExists(policy string) bool {
 	res, err := ec.client.ILM.GetLifecycle(
 		ec.client.ILM.GetLifecycle.WithPolicy(policy),
 	)
-	if err != nil {
-		log.Warn("elasticClient.PolicyExists", "error", err.Error())
-		return false
-	}
-	if res.StatusCode == http.StatusOK {
-		return true
-	}
-
-	return false
-}
-
-// AliasExists checks if an index alias already exists
-func (ec *elasticClient) aliasExists(alias string) bool {
-	aliasRoute := fmt.Sprintf(
-		"/_alias/%s",
-		alias,
-	)
-
-	req := newRequest(http.MethodHead, aliasRoute, nil)
-	res, err := ec.client.Transport.Perform(req)
-	if err != nil {
-		log.Warn("elasticClient.AliasExists",
-			"error performing request", err.Error())
-		return false
-	}
-
-	response := &esapi.Response{
-		StatusCode: res.StatusCode,
-		Body:       res.Body,
-		Header:     res.Header,
-	}
-
-	return exists(response, nil)
+	return exists(res, err)
 }
 
 // CreateIndex creates an elasticsearch index
@@ -359,17 +317,13 @@ func (ec *elasticClient) getWriteIndex(alias string) (string, error) {
 
 // UpdateByQuery will update all the documents that match the provided query from the provided index
 func (ec *elasticClient) UpdateByQuery(ctx context.Context, index string, buff *bytes.Buffer) error {
-	reader := bytes.NewReader(buff.Bytes())
 	res, err := ec.client.UpdateByQuery(
 		[]string{index},
-		ec.client.UpdateByQuery.WithBody(reader),
+		ec.client.UpdateByQuery.WithBody(buff),
 		ec.client.UpdateByQuery.WithContext(ctx),
 	)
 	if err != nil {
 		return err
-	}
-	if res.IsError() {
-		return fmt.Errorf("%s", res.String())
 	}
 
 	return parseResponse(res, nil, elasticDefaultErrorResponseHandler)
