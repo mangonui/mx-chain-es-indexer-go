@@ -70,13 +70,16 @@ func (ec *elasticClient) CheckAndCreatePolicy(policyName string, policy *bytes.B
 }
 
 // SetWriteIndexTrue will set the provided index as write index
-func (ec *elasticClient) SetWriteIndexTrue(alias string, _ string) error {
+func (ec *elasticClient) SetWriteIndexTrue(alias string, providedIndex string) error {
 	writeIndexFromCluster, isSet, err := ec.getWriteIndex(alias)
 	if err != nil {
 		return fmt.Errorf("err getting write index from cluster: %v", err)
 	}
 	if isSet {
 		return nil
+	}
+	if writeIndexFromCluster == alias {
+		writeIndexFromCluster = providedIndex
 	}
 
 	body := fmt.Sprintf(`{"actions":[{"add":{"index":"%s","alias":"%s","is_write_index":true}}]}`, writeIndexFromCluster, alias)
