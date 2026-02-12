@@ -70,8 +70,16 @@ func (ec *elasticClient) CheckAndCreatePolicy(policyName string, policy *bytes.B
 }
 
 // SetWriteIndexTrue will set the provided index as write index
-func (ec *elasticClient) SetWriteIndexTrue(alias string, index string) error {
-	body := fmt.Sprintf(`{"actions":[{"add":{"index":"%s","alias":"%s","is_write_index":true}}]}`, index, alias)
+func (ec *elasticClient) SetWriteIndexTrue(alias string, _ string) error {
+	writeIndexFromCluster, isSet, err := ec.getWriteIndex(alias)
+	if err != nil {
+		return fmt.Errorf("err getting write index from cluster: %v", err)
+	}
+	if isSet {
+		return nil
+	}
+
+	body := fmt.Sprintf(`{"actions":[{"add":{"index":"%s","alias":"%s","is_write_index":true}}]}`, writeIndexFromCluster, alias)
 	res, err := ec.client.Indices.UpdateAliases(
 		bytes.NewBufferString(body),
 	)
@@ -174,7 +182,7 @@ func (ec *elasticClient) DoQueryRemove(ctx context.Context, index string, body *
 		log.Warn("elasticClient.doRefresh", "cannot do refresh", err)
 	}
 
-	writeIndex, err := ec.getWriteIndex(index)
+	writeIndex, _, err := ec.getWriteIndex(index)
 	if err != nil {
 		log.Warn("elasticClient.getWriteIndex", "cannot do get write index", err)
 		return err
@@ -282,12 +290,12 @@ func (ec *elasticClient) createAlias(alias string, index string) error {
 	return parseResponse(res, nil, elasticDefaultErrorResponseHandler)
 }
 
-func (ec *elasticClient) getWriteIndex(alias string) (string, error) {
+func (ec *elasticClient) getWriteIndex(alias string) (string, bool, error) {
 	res, err := ec.client.Indices.GetAlias(
 		ec.client.Indices.GetAlias.WithIndex(alias),
 	)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	var indexData map[string]struct {
@@ -297,22 +305,21 @@ func (ec *elasticClient) getWriteIndex(alias string) (string, error) {
 	}
 	err = parseResponse(res, &indexData, elasticDefaultErrorResponseHandler)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	for index, details := range indexData {
-		if len(indexData) == 1 {
-			return index, nil
-		}
-
 		for _, indexAlias := range details.Aliases {
 			if indexAlias.IsWriteIndex {
-				return index, nil
+				return index, true, nil
 			}
+		}
+		if len(indexData) == 1 {
+			return index, false, nil
 		}
 	}
 
-	return alias, nil
+	return alias, false, nil
 }
 
 // UpdateByQuery will update all the documents that match the provided query from the provided index
