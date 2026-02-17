@@ -50,6 +50,7 @@ func TestNFTUpdateMetadata(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
+					Address: decodeAddress(address),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(address),
@@ -77,6 +78,7 @@ func TestNFTUpdateMetadata(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
+					Address: decodeAddress(address),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(address),
@@ -98,6 +100,7 @@ func TestNFTUpdateMetadata(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
+					Address: decodeAddress(address),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(address),
@@ -125,6 +128,7 @@ func TestNFTUpdateMetadata(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
+					Address: decodeAddress(address),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(address),
@@ -153,6 +157,7 @@ func TestNFTUpdateMetadata(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
+					Address: decodeAddress(address),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(address),
@@ -180,6 +185,7 @@ func TestNFTUpdateMetadata(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
+					Address: decodeAddress(address),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(address),
@@ -206,6 +212,7 @@ func TestNFTUpdateMetadata(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
+					Address: decodeAddress(address),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(address),
@@ -232,6 +239,7 @@ func TestNFTUpdateMetadata(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
+					Address: decodeAddress(address),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(address),
@@ -259,6 +267,7 @@ func TestNFTUpdateMetadata(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
+					Address: decodeAddress(address),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(newCreator),
@@ -285,6 +294,7 @@ func TestNFTUpdateMetadata(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
+					Address: decodeAddress(address),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(address),
@@ -337,6 +347,7 @@ func TestCreateNFTAndMetaDataRecreate(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
+					Address: decodeAddress(address),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(address),
@@ -373,6 +384,7 @@ func TestCreateNFTAndMetaDataRecreate(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
+					Address: decodeAddress(address),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(address),
@@ -408,6 +420,7 @@ func TestCreateNFTAndMetaDataRecreate(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
+					Address: decodeAddress(address),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(address),
@@ -460,6 +473,7 @@ func TestMultipleESDTMetadataRecreate(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
+					Address: decodeAddress(address),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(address),
@@ -473,6 +487,7 @@ func TestMultipleESDTMetadataRecreate(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h2")),
 				Log: &transaction.Log{
+					Address: decodeAddress(address),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(address),
@@ -503,6 +518,7 @@ func TestMultipleESDTMetadataRecreate(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
+					Address: decodeAddress(address),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(address),
@@ -516,6 +532,7 @@ func TestMultipleESDTMetadataRecreate(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h2")),
 				Log: &transaction.Log{
+					Address: decodeAddress(address),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(address),

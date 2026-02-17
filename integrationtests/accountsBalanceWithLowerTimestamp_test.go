@@ -66,9 +66,10 @@ func TestIndexAccountsBalance(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
+					Address: decodeAddress(addr),
 					Events: []*transaction.Event{
 						{
-							Address:    []byte("eeeebbbb"),
+							Address:    decodeAddress(addr),
 							Identifier: []byte(core.BuiltInFunctionESDTTransfer),
 							Topics:     [][]byte{[]byte("TTTT-abcd"), nil, big.NewInt(1).Bytes()},
 						},
@@ -133,7 +134,8 @@ func TestIndexAccountsBalance(t *testing.T) {
 		Transactions: map[string]*outport.TxInfo{
 			hex.EncodeToString([]byte("h1")): {
 				Transaction: &transaction.Transaction{
-					SndAddr: []byte(addr),
+					SndAddr: decodeAddress(addr),
+					RcvAddr: decodeAddress(addr),
 				},
 				FeeInfo: &outport.FeeInfo{},
 			},
@@ -142,6 +144,7 @@ func TestIndexAccountsBalance(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
+					Address: decodeAddress(addr),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(addr2),

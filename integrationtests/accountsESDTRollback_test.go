@@ -37,6 +37,7 @@ func TestAccountsESDTDeleteOnRollback(t *testing.T) {
 	coreAlteredAccounts := map[string]*alteredAccount.AlteredAccount{
 		addr: {
 			Address: addr,
+			Balance: "0",
 			Tokens: []*alteredAccount.AccountTokenData{
 				{
 					Identifier: "TOKEN-eeee",
@@ -61,6 +62,7 @@ func TestAccountsESDTDeleteOnRollback(t *testing.T) {
 			{
 				TxHash: hex.EncodeToString([]byte("h1")),
 				Log: &transaction.Log{
+					Address: decodeAddress(addr),
 					Events: []*transaction.Event{
 						{
 							Address:    decodeAddress(addr),
