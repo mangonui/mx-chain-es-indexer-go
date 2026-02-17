@@ -7,7 +7,7 @@ on:
 
 jobs:
   test-0:
-    name: Elasticsearch v7.16.2
+    name: Elasticsearch v7.16.1
     runs-on: ubuntu-22.04
     steps:
       - name: Set up Go 1.x
@@ -22,8 +22,8 @@ jobs:
       - name: Get dependencies
         run: |
           go get -v -t -d ./...
-      - name: Run integration tests with Elasticsearch `v7.16.2`
-        run: make integration-tests ES_VERSION=7.16.2
+      - name: Run integration tests with Elasticsearch `v7.16.1`
+        run: make integration-tests ES_VERSION=7.16.1
   test-1:
     name: Elasticsearch v7.17.8
     runs-on: ubuntu-latest
