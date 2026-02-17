@@ -72,6 +72,7 @@ type ExecutionResult struct {
 	Round                uint64               `json:"round"`
 	TimestampMs          uint64               `json:"timestampMs"`
 	Epoch                uint32               `json:"epoch"`
+	ShardID              uint32               `json:"shardId"`
 	MiniBlocksHashes     []string             `json:"miniBlocksHashes"`
 	MiniBlocksDetails    []*MiniBlocksDetails `json:"miniBlocksDetails,omitempty"`
 }
