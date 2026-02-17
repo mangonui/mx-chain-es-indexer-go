@@ -23,6 +23,7 @@ start() {
   docker ps -a
   echo "Waiting Elasticsearch cluster to start..."
   sleep 30s
+  docker ps -a
 }
 
 stop() {
