@@ -20,6 +20,7 @@ start() {
    -e "discovery.type=single-node" -e "xpack.security.enabled=false" -e "ES_JAVA_OPTS=-Xms512m -Xmx512m" \
     docker.elastic.co/elasticsearch/elasticsearch:${ES_VERSION} || true
 
+  docker logs "${IMAGE_NAME}"
   # Wait elastic cluster to start
   echo "Waiting Elasticsearch cluster to start..."
   sleep 30s
