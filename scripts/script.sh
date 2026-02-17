@@ -23,7 +23,7 @@ start() {
   echo "Waiting Elasticsearch cluster to start..."
   sleep 30s
   docker ps -a
-  docker logs elastic-container || true
+  docker logs "${IMAGE_NAME}" || true
 }
 
 stop() {
