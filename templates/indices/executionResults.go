@@ -74,6 +74,9 @@ var ExecutionResults = Object{
 					"type":   "date",
 					"format": "epoch_millis",
 				},
+				"shardId": Object{
+					"type": "long",
+				},
 			},
 		},
 	},
