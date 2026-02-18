@@ -196,6 +196,7 @@ func (bp *blockProcessor) prepareExecutionResult(baseExecutionResult coreData.Ba
 		Round:                baseExecutionResult.GetHeaderRound(),
 		Epoch:                baseExecutionResult.GetHeaderEpoch(),
 		GasUsed:              baseExecutionResult.GetGasUsed(),
+		ShardID:              obh.ShardID,
 	}
 
 	executionResultData, found := obh.BlockData.Results[executionResultsHash]

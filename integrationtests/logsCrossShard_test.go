@@ -65,7 +65,10 @@ func TestIndexLogSourceShardAndAfterDestinationAndAgainSource(t *testing.T) {
 		},
 		Transactions: map[string]*outport.TxInfo{
 			logID: {
-				Transaction:    &transaction.Transaction{},
+				Transaction: &transaction.Transaction{
+					SndAddr: decodeAddress(address1),
+					RcvAddr: decodeAddress(address1),
+				},
 				ExecutionOrder: 0,
 			},
 		},
@@ -122,7 +125,10 @@ func TestIndexLogSourceShardAndAfterDestinationAndAgainSource(t *testing.T) {
 		},
 		Transactions: map[string]*outport.TxInfo{
 			logID: {
-				Transaction:    &transaction.Transaction{},
+				Transaction: &transaction.Transaction{
+					SndAddr: decodeAddress(address1),
+					RcvAddr: decodeAddress(address1),
+				},
 				ExecutionOrder: 0,
 			},
 		},
@@ -175,7 +181,10 @@ func TestIndexLogSourceShardAndAfterDestinationAndAgainSource(t *testing.T) {
 		},
 		Transactions: map[string]*outport.TxInfo{
 			logID: {
-				Transaction:    &transaction.Transaction{},
+				Transaction: &transaction.Transaction{
+					SndAddr: decodeAddress(address1),
+					RcvAddr: decodeAddress(address1),
+				},
 				ExecutionOrder: 0,
 			},
 		},

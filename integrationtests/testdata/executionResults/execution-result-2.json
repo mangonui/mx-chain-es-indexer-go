@@ -9,5 +9,6 @@
   "round": 3,
   "epoch": 3,
   "miniBlocksHashes":[],
-  "timestampMs": 1234567890
+  "timestampMs": 1234567890,
+  "shardId": 0
 }
