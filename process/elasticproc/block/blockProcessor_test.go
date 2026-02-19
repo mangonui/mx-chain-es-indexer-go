@@ -608,6 +608,12 @@ func TestPrepareExecutionResult(t *testing.T) {
 				Body: &dataBlock.Body{},
 				Results: map[string]*outport.ExecutionResultData{
 					hex.EncodeToString(executionResultHeaderHash): {
+						HeaderGasConsumption: &outport.HeaderGasConsumption{
+							GasProvided:    200,
+							GasRefunded:    100,
+							GasPenalized:   100,
+							MaxGasPerBlock: 500_000,
+						},
 						TimestampMs: 1234567890,
 						Body: &dataBlock.Body{
 							MiniBlocks: []*dataBlock.MiniBlock{
@@ -651,6 +657,10 @@ func TestPrepareExecutionResult(t *testing.T) {
 		TimestampMs:          1234567890,
 		Epoch:                3,
 		ShardID:              2,
+		GasProvided:          200,
+		GasRefunded:          100,
+		GasPenalized:         100,
+		MaxGasLimit:          500_000,
 		MiniBlocksHashes:     []string{"2dae16da63bc04a18cf7609e0a79d7867b11463660dbab048b044b8434bf0a82"},
 		MiniBlocksDetails: []*data.MiniBlocksDetails{
 			{

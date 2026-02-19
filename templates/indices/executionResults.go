@@ -58,6 +58,18 @@ var ExecutionResults = Object{
 				"gasUsed": Object{
 					"type": "double",
 				},
+				"gasPenalized": Object{
+					"type": "double",
+				},
+				"gasProvided": Object{
+					"type": "double",
+				},
+				"gasRefunded": Object{
+					"type": "double",
+				},
+				"maxGasLimit": Object{
+					"type": "double",
+				},
 				"txCount": Object{
 					"index": "false",
 					"type":  "long",
