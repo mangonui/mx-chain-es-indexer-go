@@ -26,9 +26,8 @@ const (
 )
 
 var (
-	log                     = logger.GetOrCreate("indexer/process/block")
-	errNilBlockData         = errors.New("nil block data")
-	errNilHeaderGasConsumed = errors.New("nil header gas consumed data")
+	log             = logger.GetOrCreate("indexer/process/block")
+	errNilBlockData = errors.New("nil block data")
 )
 
 type blockProcessor struct {
@@ -67,9 +66,6 @@ func (bp *blockProcessor) PrepareBlockForDB(obh *outport.OutportBlockWithHeader)
 	if obh.BlockData.Body == nil {
 		return nil, indexer.ErrNilBlockBody
 	}
-	if obh.HeaderGasConsumption == nil {
-		return nil, errNilHeaderGasConsumed
-	}
 
 	blockSizeInBytes, err := bp.computeBlockSize(obh.BlockData.HeaderBytes, obh.BlockData.Body)
 	if err != nil {
@@ -102,10 +98,6 @@ func (bp *blockProcessor) PrepareBlockForDB(obh *outport.OutportBlockWithHeader)
 		PrevHash:              hex.EncodeToString(obh.Header.GetPrevHash()),
 		SearchOrder:           computeBlockSearchOrder(obh.Header),
 		EpochStartBlock:       obh.Header.IsStartOfEpochBlock(),
-		GasProvided:           obh.HeaderGasConsumption.GasProvided,
-		GasRefunded:           obh.HeaderGasConsumption.GasRefunded,
-		GasPenalized:          obh.HeaderGasConsumption.GasPenalized,
-		MaxGasLimit:           obh.HeaderGasConsumption.MaxGasPerBlock,
 		AccumulatedFees:       converters.BigIntToString(obh.Header.GetAccumulatedFees()),
 		DeveloperFees:         converters.BigIntToString(obh.Header.GetDeveloperFees()),
 		RandSeed:              hex.EncodeToString(obh.Header.GetRandSeed()),
@@ -117,6 +109,13 @@ func (bp *blockProcessor) PrepareBlockForDB(obh *outport.OutportBlockWithHeader)
 		ReceiptsHash:          hex.EncodeToString(obh.Header.GetReceiptsHash()),
 		Reserved:              obh.Header.GetReserved(),
 		UUID:                  converters.GenerateBase64UUID(),
+	}
+
+	if obh.HeaderGasConsumption != nil {
+		elasticBlock.MaxGasLimit = obh.HeaderGasConsumption.MaxGasPerBlock
+		elasticBlock.GasPenalized = obh.HeaderGasConsumption.GasPenalized
+		elasticBlock.GasProvided = obh.HeaderGasConsumption.GasProvided
+		elasticBlock.GasRefunded = obh.HeaderGasConsumption.GasRefunded
 	}
 
 	additionalData := obh.Header.GetAdditionalData()
@@ -207,6 +206,13 @@ func (bp *blockProcessor) prepareExecutionResult(baseExecutionResult coreData.Ba
 
 	executionResult.MiniBlocksHashes = bp.getEncodedMBSHashes(executionResultData.Body, executionResultData.IntraShardMiniBlocks)
 	executionResult.TimestampMs = executionResultData.TimestampMs
+	if executionResultData.HeaderGasConsumption != nil {
+		executionResult.GasProvided = executionResultData.HeaderGasConsumption.GasProvided
+		executionResult.GasRefunded = executionResultData.HeaderGasConsumption.GasRefunded
+		executionResult.GasPenalized = executionResultData.HeaderGasConsumption.GasPenalized
+		executionResult.MaxGasLimit = executionResultData.HeaderGasConsumption.MaxGasPerBlock
+
+	}
 
 	switch t := baseExecutionResult.(type) {
 	case *nodeBlock.MetaExecutionResult:

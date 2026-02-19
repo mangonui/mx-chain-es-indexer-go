@@ -68,6 +68,10 @@ type ExecutionResult struct {
 	DeveloperFees        string               `json:"developerFees"`
 	TxCount              uint64               `json:"txCount"`
 	GasUsed              uint64               `json:"gasUsed"`
+	GasProvided          uint64               `json:"gasProvided"`
+	GasRefunded          uint64               `json:"gasRefunded"`
+	GasPenalized         uint64               `json:"gasPenalized"`
+	MaxGasLimit          uint64               `json:"maxGasLimit"`
 	Nonce                uint64               `json:"nonce"`
 	Round                uint64               `json:"round"`
 	TimestampMs          uint64               `json:"timestampMs"`
