@@ -90,7 +90,7 @@ func (bp *blockProcessor) PrepareBlockForDB(obh *outport.OutportBlockWithHeader)
 		PubKeyBitmap:          hex.EncodeToString(obh.Header.GetPubKeysBitmap()),
 		Size:                  int64(blockSizeInBytes),
 		SizeTxs:               int64(sizeTxs),
-		Timestamp:             obh.Header.GetTimeStamp(),
+		Timestamp:             converters.MillisecondsToSeconds(obh.BlockData.TimestampMs),
 		TimestampMs:           obh.OutportBlock.BlockData.GetTimestampMs(),
 		TxCount:               numTxs,
 		NotarizedTxsCount:     notarizedTxs,
