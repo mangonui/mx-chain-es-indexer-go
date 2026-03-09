@@ -50,8 +50,11 @@ func (proc *smartContractResultsProcessor) processSCRs(
 
 	// a copy of the SCRS map is needed because proc.processSCRsFromMiniblock would remove items from the original map
 	workingSCRSMap := copySCRSMap(scrs)
-	for _, mb := range miniBlocks {
+	for idx, mb := range miniBlocks {
 		if mb.Type != block.SmartContractResultBlock {
+			continue
+		}
+		if isMiniblockProposed(idx, headerData) {
 			continue
 		}
 
@@ -67,6 +70,15 @@ func (proc *smartContractResultsProcessor) processSCRs(
 	}
 
 	return allSCRs
+}
+
+func isMiniblockProposed(mbIndex int, headerData *indexerData.HeaderData) bool {
+	if len(headerData.MiniBlockHeaders) <= mbIndex {
+		return false
+	}
+	mbHeader := headerData.MiniBlockHeaders[mbIndex]
+
+	return int32(block.Proposed) == mbHeader.GetConstructionState()
 }
 
 func (proc *smartContractResultsProcessor) processSCRsFromMiniblock(
