@@ -59,6 +59,18 @@
         "gasUsed": {
           "type": "double"
         },
+        "gasPenalized": {
+          "type": "double"
+        },
+        "gasProvided": {
+          "type": "double"
+        },
+        "gasRefunded": {
+          "type": "double"
+        },
+        "maxGasLimit": {
+          "type": "double"
+        },
         "txCount": {
           "index": "false",
           "type": "long"
@@ -74,6 +86,9 @@
         "timestampMs": {
           "type": "date",
           "format": "epoch_millis"
+        },
+        "shardId": {
+          "type": "long"
         }
       }
     }

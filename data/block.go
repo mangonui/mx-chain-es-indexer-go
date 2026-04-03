@@ -52,6 +52,8 @@ type Block struct {
 	Reserved                   []byte                 `json:"reserved,omitempty"`
 	ProposerBlsKey             string                 `json:"proposerBlsKey,omitempty"`
 	ExecutionResultBlockHashes []string               `json:"executionResultBlockHashes,omitempty"`
+	LastExecutionResultHash    string                 `json:"lastExecutionResultHash,omitempty"`
+	LastExecutionResultNonce   uint64                 `json:"lastExecutionResultNonce,omitempty"`
 }
 
 // ExecutionResult is a structure containing all the fields that need
@@ -66,9 +68,15 @@ type ExecutionResult struct {
 	DeveloperFees        string               `json:"developerFees"`
 	TxCount              uint64               `json:"txCount"`
 	GasUsed              uint64               `json:"gasUsed"`
+	GasProvided          uint64               `json:"gasProvided"`
+	GasRefunded          uint64               `json:"gasRefunded"`
+	GasPenalized         uint64               `json:"gasPenalized"`
+	MaxGasLimit          uint64               `json:"maxGasLimit"`
 	Nonce                uint64               `json:"nonce"`
 	Round                uint64               `json:"round"`
+	TimestampMs          uint64               `json:"timestampMs"`
 	Epoch                uint32               `json:"epoch"`
+	ShardID              uint32               `json:"shardId"`
 	MiniBlocksHashes     []string             `json:"miniBlocksHashes"`
 	MiniBlocksDetails    []*MiniBlocksDetails `json:"miniBlocksDetails,omitempty"`
 }

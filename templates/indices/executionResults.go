@@ -58,6 +58,18 @@ var ExecutionResults = Object{
 				"gasUsed": Object{
 					"type": "double",
 				},
+				"gasPenalized": Object{
+					"type": "double",
+				},
+				"gasProvided": Object{
+					"type": "double",
+				},
+				"gasRefunded": Object{
+					"type": "double",
+				},
+				"maxGasLimit": Object{
+					"type": "double",
+				},
 				"txCount": Object{
 					"index": "false",
 					"type":  "long",
@@ -73,6 +85,9 @@ var ExecutionResults = Object{
 				"timestampMs": Object{
 					"type":   "date",
 					"format": "epoch_millis",
+				},
+				"shardId": Object{
+					"type": "long",
 				},
 			},
 		},

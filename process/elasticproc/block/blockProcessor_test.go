@@ -291,8 +291,12 @@ func TestBlockProcessor_PrepareBlockForDBEpochStartMeta(t *testing.T) {
 				HeaderHash:  []byte("hash"),
 				Body: &dataBlock.Body{
 					MiniBlocks: []*dataBlock.MiniBlock{
-						{},
-						{},
+						{
+							Reserved: []byte("rrr"),
+						},
+						{
+							Reserved: []byte("bbb"),
+						},
 					},
 				},
 			},
@@ -311,12 +315,12 @@ func TestBlockProcessor_PrepareBlockForDBEpochStartMeta(t *testing.T) {
 		Round:                 0,
 		Epoch:                 0,
 		Hash:                  "68617368",
-		MiniBlocksHashes:      []string{"8748c4677b01f7db984004fa8465afbf55feaab4b573174c8c0afa282941b9e4", "8748c4677b01f7db984004fa8465afbf55feaab4b573174c8c0afa282941b9e4"},
+		MiniBlocksHashes:      []string{"89a593868f8904c0271805b55cc3259cefcf45284c0e1b0bf02781758ed88909", "1b90cc55d9b861b903fd793616b85aa8418f7e313746d7184a73950ab32bf3da"},
 		NotarizedBlocksHashes: nil,
 		Proposer:              0,
 		Validators:            nil,
 		PubKeyBitmap:          "6269746d617031",
-		Size:                  914,
+		Size:                  950,
 		SizeTxs:               0,
 		Timestamp:             123,
 		TimestampMs:           123000,
@@ -598,11 +602,19 @@ func TestPrepareExecutionResult(t *testing.T) {
 			},
 		},
 		OutportBlock: &outport.OutportBlock{
+			ShardID:              2,
 			HeaderGasConsumption: &outport.HeaderGasConsumption{},
 			BlockData: &outport.BlockData{
 				Body: &dataBlock.Body{},
 				Results: map[string]*outport.ExecutionResultData{
 					hex.EncodeToString(executionResultHeaderHash): {
+						HeaderGasConsumption: &outport.HeaderGasConsumption{
+							GasProvided:    200,
+							GasRefunded:    100,
+							GasPenalized:   100,
+							MaxGasPerBlock: 500_000,
+						},
+						TimestampMs: 1234567890,
 						Body: &dataBlock.Body{
 							MiniBlocks: []*dataBlock.MiniBlock{
 								{
@@ -642,7 +654,13 @@ func TestPrepareExecutionResult(t *testing.T) {
 		GasUsed:              0,
 		Nonce:                1,
 		Round:                2,
+		TimestampMs:          1234567890,
 		Epoch:                3,
+		ShardID:              2,
+		GasProvided:          200,
+		GasRefunded:          100,
+		GasPenalized:         100,
+		MaxGasLimit:          500_000,
 		MiniBlocksHashes:     []string{"2dae16da63bc04a18cf7609e0a79d7867b11463660dbab048b044b8434bf0a82"},
 		MiniBlocksDetails: []*data.MiniBlocksDetails{
 			{
@@ -655,4 +673,70 @@ func TestPrepareExecutionResult(t *testing.T) {
 			},
 		},
 	}, results.ExecutionResults[0])
+}
+
+func TestAddInBlockLastExecutionResultData(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil last execution result", func(t *testing.T) {
+		elasticBlock := &data.Block{}
+		obh := &outport.OutportBlockWithHeader{
+			Header: &dataBlock.Header{},
+		}
+
+		addInBlockLastExecutionResultData(elasticBlock, obh)
+
+		require.Equal(t, "", elasticBlock.LastExecutionResultHash)
+		require.Equal(t, uint64(0), elasticBlock.LastExecutionResultNonce)
+	})
+
+	t.Run("with ExecutionResultInfo", func(t *testing.T) {
+		elasticBlock := &data.Block{}
+		headerHash := []byte("headerHash")
+		nonce := uint64(10)
+
+		execResultInfo := &dataBlock.ExecutionResultInfo{
+			ExecutionResult: &dataBlock.BaseExecutionResult{
+				HeaderHash:  headerHash,
+				HeaderNonce: nonce,
+			},
+		}
+
+		obh := &outport.OutportBlockWithHeader{
+			Header: &dataBlock.HeaderV3{
+				LastExecutionResult: execResultInfo,
+			},
+		}
+
+		addInBlockLastExecutionResultData(elasticBlock, obh)
+
+		require.Equal(t, hex.EncodeToString(headerHash), elasticBlock.LastExecutionResultHash)
+		require.Equal(t, nonce, elasticBlock.LastExecutionResultNonce)
+	})
+
+	t.Run("with MetaExecutionResultInfo", func(t *testing.T) {
+		elasticBlock := &data.Block{}
+		headerHash := []byte("headerHashMeta")
+		nonce := uint64(20)
+
+		execResultInfo := &dataBlock.MetaExecutionResultInfo{
+			ExecutionResult: &dataBlock.BaseMetaExecutionResult{
+				BaseExecutionResult: &dataBlock.BaseExecutionResult{
+					HeaderHash:  headerHash,
+					HeaderNonce: nonce,
+				},
+			},
+		}
+
+		obh := &outport.OutportBlockWithHeader{
+			Header: &dataBlock.MetaBlockV3{
+				LastExecutionResult: execResultInfo,
+			},
+		}
+
+		addInBlockLastExecutionResultData(elasticBlock, obh)
+
+		require.Equal(t, hex.EncodeToString(headerHash), elasticBlock.LastExecutionResultHash)
+		require.Equal(t, nonce, elasticBlock.LastExecutionResultNonce)
+	})
 }
