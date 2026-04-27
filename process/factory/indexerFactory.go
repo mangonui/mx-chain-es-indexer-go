@@ -46,6 +46,8 @@ type ArgsIndexerFactory struct {
 	ValidatorPubkeyConverter core.PubkeyConverter
 	StatusMetrics            indexerCore.StatusMetricsHandler
 	EnableEpochsConfig       config.EnableEpochsConfig
+	DRWAAuthorizedEmitters   []string
+	MRVAuthorizedEmitters    []string
 }
 
 // NewIndexer will create a new instance of Indexer
@@ -99,6 +101,8 @@ func createElasticProcessor(args ArgsIndexerFactory) (dataindexer.ElasticProcess
 		BulkRequestMaxSize:       args.BulkRequestMaxSize,
 		ImportDB:                 args.ImportDB,
 		Version:                  args.Version,
+		DRWAAuthorizedEmitters:   args.DRWAAuthorizedEmitters,
+		MRVAuthorizedEmitters:    args.MRVAuthorizedEmitters,
 		EnableEpochsConfig:       args.EnableEpochsConfig,
 	}
 

@@ -1,11 +1,14 @@
 package factory
 
 import (
+	"encoding/hex"
+	"fmt"
 	"github.com/multiversx/mx-chain-core-go/core"
 	"github.com/multiversx/mx-chain-core-go/hashing"
 	"github.com/multiversx/mx-chain-core-go/marshal"
 	"github.com/multiversx/mx-chain-es-indexer-go/config"
 	"github.com/multiversx/mx-chain-es-indexer-go/process/dataindexer"
+	elasticIndexer "github.com/multiversx/mx-chain-es-indexer-go/process/dataindexer"
 	"github.com/multiversx/mx-chain-es-indexer-go/process/elasticproc"
 	"github.com/multiversx/mx-chain-es-indexer-go/process/elasticproc/accounts"
 	blockProc "github.com/multiversx/mx-chain-es-indexer-go/process/elasticproc/block"
@@ -17,6 +20,7 @@ import (
 	"github.com/multiversx/mx-chain-es-indexer-go/process/elasticproc/templatesAndPolicies"
 	"github.com/multiversx/mx-chain-es-indexer-go/process/elasticproc/transactions"
 	"github.com/multiversx/mx-chain-es-indexer-go/process/elasticproc/validators"
+	"strings"
 )
 
 // ArgElasticProcessorFactory is struct that is used to store all components that are needed to create an elastic processor factory
@@ -32,6 +36,8 @@ type ArgElasticProcessorFactory struct {
 	BulkRequestMaxSize       int
 	UseKibana                bool
 	ImportDB                 bool
+	DRWAAuthorizedEmitters   []string
+	MRVAuthorizedEmitters    []string
 	EnableEpochsConfig       config.EnableEpochsConfig
 }
 
@@ -45,6 +51,21 @@ func CreateElasticProcessor(arguments ArgElasticProcessorFactory) (dataindexer.E
 	}
 	if len(enabledIndexesMap) == 0 {
 		return nil, dataindexer.ErrEmptyEnabledIndexes
+	}
+
+	drwaAuthorizedEmitters, err := parseConfiguredEmitters(arguments.AddressPubkeyConverter, arguments.DRWAAuthorizedEmitters, "DRWA")
+	if err != nil {
+		return nil, err
+	}
+	if requiresDRWAEmitterAuthority(enabledIndexesMap) && len(drwaAuthorizedEmitters) == 0 {
+		return nil, fmt.Errorf("DRWA indices are enabled but no [config.drwa].authorized-emitters are configured")
+	}
+	mrvAuthorizedEmitters, err := parseConfiguredEmitters(arguments.AddressPubkeyConverter, arguments.MRVAuthorizedEmitters, "MRV")
+	if err != nil {
+		return nil, err
+	}
+	if requiresMRVEmitterAuthority(enabledIndexesMap) && len(mrvAuthorizedEmitters) == 0 {
+		return nil, fmt.Errorf("MRV indices are enabled but no [config.mrv].authorized-emitters are configured")
 	}
 
 	balanceConverter, err := converters.NewBalanceConverter(arguments.Denomination)
@@ -89,10 +110,12 @@ func CreateElasticProcessor(arguments ArgElasticProcessorFactory) (dataindexer.E
 	}
 
 	argsLogsAndEventsProc := logsevents.ArgsLogsAndEventsProcessor{
-		PubKeyConverter:  arguments.AddressPubkeyConverter,
-		Marshalizer:      arguments.Marshalizer,
-		BalanceConverter: balanceConverter,
-		Hasher:           arguments.Hasher,
+		PubKeyConverter:        arguments.AddressPubkeyConverter,
+		Marshalizer:            arguments.Marshalizer,
+		BalanceConverter:       balanceConverter,
+		Hasher:                 arguments.Hasher,
+		DRWAAuthorizedEmitters: drwaAuthorizedEmitters,
+		MRVAuthorizedEmitters:  mrvAuthorizedEmitters,
 	}
 	logsAndEventsProc, err := logsevents.NewLogsAndEventsProcessor(argsLogsAndEventsProc)
 	if err != nil {
@@ -123,4 +146,53 @@ func CreateElasticProcessor(arguments ArgElasticProcessorFactory) (dataindexer.E
 	}
 
 	return elasticproc.NewElasticProcessor(args)
+}
+
+func parseConfiguredEmitters(converter core.PubkeyConverter, configured []string, label string) ([][]byte, error) {
+	emitters := make([][]byte, 0, len(configured))
+	for _, raw := range configured {
+		value := strings.TrimSpace(raw)
+		if value == "" {
+			continue
+		}
+
+		if strings.HasPrefix(strings.ToLower(value), "0x") {
+			decoded, err := hex.DecodeString(value[2:])
+			if err != nil {
+				return nil, fmt.Errorf("invalid %s authorized emitter %q: %w", label, raw, err)
+			}
+			emitters = append(emitters, decoded)
+			continue
+		}
+
+		decoded, err := converter.Decode(value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid %s authorized emitter %q: %w", label, raw, err)
+		}
+		emitters = append(emitters, decoded)
+	}
+
+	return emitters, nil
+}
+
+func requiresMRVEmitterAuthority(enabledIndexes map[string]struct{}) bool {
+	_, ok := enabledIndexes[elasticIndexer.MrvAnchoredProofsIndex]
+	return ok
+}
+
+func requiresDRWAEmitterAuthority(enabledIndexes map[string]struct{}) bool {
+	for _, index := range []string{
+		elasticIndexer.DrwaDenialsIndex,
+		elasticIndexer.DrwaIdentitiesIndex,
+		elasticIndexer.DrwaHolderComplianceIndex,
+		elasticIndexer.DrwaAttestationsIndex,
+		elasticIndexer.DrwaTokenPoliciesIndex,
+		elasticIndexer.DrwaControlEventsIndex,
+	} {
+		if _, ok := enabledIndexes[index]; ok {
+			return true
+		}
+	}
+
+	return false
 }

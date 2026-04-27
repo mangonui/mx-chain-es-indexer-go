@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -189,6 +190,14 @@ func loadEpochsConfig(filepath string) (config.EnableEpochsConfig, error) {
 func loadClusterConfig(filepath string) (config.ClusterConfig, error) {
 	cfg := config.ClusterConfig{}
 	err := core.LoadTomlFile(&cfg, filepath)
+	if err != nil {
+		return config.ClusterConfig{}, err
+	}
+
+	elasticCfg := cfg.Config.ElasticCluster
+	if !elasticCfg.AllowInsecureNoAuthDev && (strings.TrimSpace(elasticCfg.UserName) == "" || strings.TrimSpace(elasticCfg.Password) == "") {
+		return config.ClusterConfig{}, fmt.Errorf("elasticsearch username and password are required unless allow-insecure-no-auth-dev is explicitly enabled")
+	}
 
 	return cfg, err
 }

@@ -4,6 +4,12 @@ package config
 type Config struct {
 	Config struct {
 		AvailableIndices []string `toml:"available-indices"`
+		DRWA             struct {
+			AuthorizedEmitters []string `toml:"authorized-emitters"`
+		} `toml:"drwa"`
+		MRV struct {
+			AuthorizedEmitters []string `toml:"authorized-emitters"`
+		} `toml:"mrv"`
 		AddressConverter struct {
 			Length int    `toml:"length"`
 			Type   string `toml:"type"`
@@ -45,11 +51,13 @@ type ClusterConfig struct {
 			AckTimeoutInSec    uint32 `toml:"acknowledge-timeout-in-seconds"`
 		} `toml:"web-socket"`
 		ElasticCluster struct {
-			UseKibana                 bool   `toml:"use-kibana"`
-			URL                       string `toml:"url"`
-			UserName                  string `toml:"username"`
-			Password                  string `toml:"password"`
-			BulkRequestMaxSizeInBytes int    `toml:"bulk-request-max-size-in-bytes"`
+			UseKibana              bool   `toml:"use-kibana"`
+			URL                    string `toml:"url"`
+			UserName               string `toml:"username"`
+			Password               string `toml:"password"`
+			AllowInsecureNoAuthDev bool   `toml:"allow-insecure-no-auth-dev"`
+
+			BulkRequestMaxSizeInBytes int `toml:"bulk-request-max-size-in-bytes"`
 		} `toml:"elastic-cluster"`
 	} `toml:"config"`
 }

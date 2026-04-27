@@ -87,6 +87,94 @@ func TestDataIndexer_SaveBlock(t *testing.T) {
 	require.Equal(t, 1, countMap[2])
 }
 
+func TestDataIndexer_SaveBlockRepairsFinalizedStateFromOutportMetadata(t *testing.T) {
+	countMap := map[int]int{}
+
+	arguments := NewDataIndexerArguments()
+	arguments.BlockContainer = &mock.BlockContainerStub{
+		GetCalled: func(headerType core.HeaderType) (dataBlock.EmptyBlockCreator, error) {
+			return dataBlock.NewEmptyHeaderV2Creator(), nil
+		},
+	}
+
+	arguments.ElasticProcessor = &mock.ElasticProcessorStub{
+		SaveHeaderCalled: func(outportBlockWithHeader *outport.OutportBlockWithHeader) error {
+			countMap[0]++
+			return nil
+		},
+		SaveMiniblocksCalled: func(header coreData.HeaderHandler, miniBlocks []*dataBlock.MiniBlock, timestampMs uint64) error {
+			countMap[1]++
+			return nil
+		},
+		SaveTransactionsCalled: func(outportBlockWithHeader *outport.OutportBlockWithHeader) error {
+			countMap[2]++
+			return nil
+		},
+		FinalizedBlockCalled: func(finalizedBlock *outport.FinalizedBlock) error {
+			countMap[3]++
+			require.Equal(t, uint32(0), finalizedBlock.ShardID)
+			require.Equal(t, []byte("highest-final-hash"), finalizedBlock.HeaderHash)
+			return nil
+		},
+	}
+	ei, _ := NewDataIndexer(arguments)
+
+	args := &outport.OutportBlock{
+		BlockData: &outport.BlockData{
+			HeaderType:  string(core.ShardHeaderV2),
+			Body:        &dataBlock.Body{MiniBlocks: []*dataBlock.MiniBlock{{}}},
+			HeaderBytes: []byte("{}"),
+		},
+		HighestFinalBlockHash:  []byte("highest-final-hash"),
+		HighestFinalBlockNonce: 42,
+	}
+	err := ei.SaveBlock(args)
+	require.NoError(t, err)
+	require.Equal(t, 1, countMap[0])
+	require.Equal(t, 1, countMap[1])
+	require.Equal(t, 1, countMap[2])
+	require.Equal(t, 1, countMap[3])
+}
+
+func TestDataIndexer_SaveBlockSkipsFinalityRepairWhenHighestFinalHashMissing(t *testing.T) {
+	called := false
+
+	arguments := NewDataIndexerArguments()
+	arguments.BlockContainer = &mock.BlockContainerStub{
+		GetCalled: func(headerType core.HeaderType) (dataBlock.EmptyBlockCreator, error) {
+			return dataBlock.NewEmptyHeaderV2Creator(), nil
+		},
+	}
+
+	arguments.ElasticProcessor = &mock.ElasticProcessorStub{
+		SaveHeaderCalled: func(outportBlockWithHeader *outport.OutportBlockWithHeader) error {
+			return nil
+		},
+		SaveMiniblocksCalled: func(header coreData.HeaderHandler, miniBlocks []*dataBlock.MiniBlock, timestampMs uint64) error {
+			return nil
+		},
+		SaveTransactionsCalled: func(outportBlockWithHeader *outport.OutportBlockWithHeader) error {
+			return nil
+		},
+		FinalizedBlockCalled: func(finalizedBlock *outport.FinalizedBlock) error {
+			called = true
+			return nil
+		},
+	}
+	ei, _ := NewDataIndexer(arguments)
+
+	args := &outport.OutportBlock{
+		BlockData: &outport.BlockData{
+			HeaderType:  string(core.ShardHeaderV2),
+			Body:        &dataBlock.Body{MiniBlocks: []*dataBlock.MiniBlock{{}}},
+			HeaderBytes: []byte("{}"),
+		},
+	}
+	err := ei.SaveBlock(args)
+	require.NoError(t, err)
+	require.False(t, called)
+}
+
 func TestDataIndexer_SaveRoundInfo(t *testing.T) {
 	called := false
 
@@ -184,4 +272,27 @@ func TestDataIndexer_RevertIndexedBlock(t *testing.T) {
 	require.Equal(t, 1, countMap[1])
 	require.Equal(t, 1, countMap[2])
 	require.Equal(t, 1, countMap[3])
+}
+
+func TestDataIndexer_FinalizedBlock(t *testing.T) {
+	called := false
+
+	arguments := NewDataIndexerArguments()
+	arguments.ElasticProcessor = &mock.ElasticProcessorStub{
+		FinalizedBlockCalled: func(finalizedBlock *outport.FinalizedBlock) error {
+			called = true
+			require.Equal(t, uint32(2), finalizedBlock.ShardID)
+			require.Equal(t, []byte("header-hash"), finalizedBlock.HeaderHash)
+			return nil
+		},
+	}
+
+	ei, _ := NewDataIndexer(arguments)
+
+	err := ei.FinalizedBlock(&outport.FinalizedBlock{
+		ShardID:    2,
+		HeaderHash: []byte("header-hash"),
+	})
+	require.NoError(t, err)
+	require.True(t, called)
 }

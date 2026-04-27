@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -95,11 +94,7 @@ func (ec *elasticClient) PutMappings(indexName string, mappings *bytes.Buffer) e
 		return err
 	}
 
-	if res.IsError() {
-		return errors.New(res.String())
-	}
-
-	return nil
+	return parseResponse(res, nil, elasticDefaultErrorResponseHandler)
 }
 
 // CheckAndCreateAlias creates a new alias if it does not already exist
@@ -392,7 +387,7 @@ func (ec *elasticClient) UpdateByQuery(ctx context.Context, index string, buff *
 		return err
 	}
 	if res.IsError() {
-		return fmt.Errorf("%s", res.String())
+		return fmt.Errorf("update by query failed with status %d", res.StatusCode)
 	}
 
 	return parseResponse(res, nil, elasticDefaultErrorResponseHandler)

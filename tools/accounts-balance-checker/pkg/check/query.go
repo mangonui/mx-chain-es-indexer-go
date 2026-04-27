@@ -46,73 +46,73 @@ func getBalancesByAddress(addr string) object {
 }
 
 func queryGetLastTxForToken(identifier, addr string) *bytes.Buffer {
-	queryBytes := fmt.Sprintf(`{
-	"query": {
-		"bool": {
-			"must": [
-				{
-					"match": {
-						"tokens": {
-							"query":"%s",
-							"operator":"AND"
-						}
-					}
+	query, _ := encodeQuery(object{
+		"query": object{
+			"bool": object{
+				"must": []object{
+					{
+						"match": object{
+							"tokens": object{
+								"query":    identifier,
+								"operator": "AND",
+							},
+						},
+					},
+					{
+						"match": object{
+							"sender": object{
+								"query":    addr,
+								"operator": "AND",
+							},
+						},
+					},
 				},
-				{
-					"match": {
-						"sender": {
-							"query":"%s",
-							"operator":"AND"
-						}
-					}
-				}
-			]
-		}
-	},
-	"sort": [
-		{
-			"timestamp": {
-				"order":"desc"
-			}
-		}
-	]
-}`, identifier, addr)
+			},
+		},
+		"sort": []object{
+			{
+				"timestamp": object{
+					"order": "desc",
+				},
+			},
+		},
+	})
 
-	return bytes.NewBuffer([]byte(queryBytes))
+	return &query
 }
 
 func queryGetLastOperationForAddress(addr string) *bytes.Buffer {
-	queryBytes := fmt.Sprintf(`{
-	"query": {
-		"bool": {
-			"should": [
-				{
-					"match": {
-						"sender": {
-							"query":"%s",
-							"operator":"AND"
-						}
-					}
+	query, _ := encodeQuery(object{
+		"query": object{
+			"bool": object{
+				"should": []object{
+					{
+						"match": object{
+							"sender": object{
+								"query":    addr,
+								"operator": "AND",
+							},
+						},
+					},
+					{
+						"match": object{
+							"receiver": object{
+								"query":    addr,
+								"operator": "AND",
+							},
+						},
+					},
 				},
-				{
-					"match": {
-						"receiver": {
-							"query":"%s",
-							"operator":"AND"
-						}
-					}
-				}
-			]
-		}
-	},
-	"sort": [
-		{
-			"timestamp": {
-				"order":"desc"
-			}
-		}
-	]
-}`, addr, addr)
+			},
+		},
+		"sort": []object{
+			{
+				"timestamp": object{
+					"order": "desc",
+				},
+			},
+		},
+	})
 
-	return bytes.NewBuffer([]byte(queryBytes))
+	return &query
 }

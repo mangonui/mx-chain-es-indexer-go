@@ -31,6 +31,7 @@ var (
 		elasticIndexer.AccountsIndex, elasticIndexer.AccountsHistoryIndex, elasticIndexer.ReceiptsIndex, elasticIndexer.ScResultsIndex, elasticIndexer.AccountsESDTHistoryIndex, elasticIndexer.AccountsESDTIndex,
 		elasticIndexer.EpochInfoIndex, elasticIndexer.SCDeploysIndex, elasticIndexer.TokensIndex, elasticIndexer.TagsIndex, elasticIndexer.LogsIndex, elasticIndexer.DelegatorsIndex, elasticIndexer.OperationsIndex,
 		elasticIndexer.ESDTsIndex, elasticIndexer.ValuesIndex, elasticIndexer.EventsIndex,
+		elasticIndexer.DrwaDenialsIndex, elasticIndexer.DrwaIdentitiesIndex, elasticIndexer.DrwaHolderComplianceIndex, elasticIndexer.DrwaAttestationsIndex, elasticIndexer.DrwaTokenPoliciesIndex, elasticIndexer.DrwaControlEventsIndex, elasticIndexer.MrvAnchoredProofsIndex,
 	}
 )
 
@@ -346,7 +347,38 @@ func (ei *elasticProcessor) RemoveTransactions(header coreData.HeaderHandler, bo
 		return err
 	}
 
+	headerHash, err := ei.blockProc.ComputeHeaderHash(header)
+	if err != nil {
+		return err
+	}
+
+	err = ei.removeDRWARecordsInCaseOfRevert(header.GetShardID(), hex.EncodeToString(headerHash))
+	if err != nil {
+		return err
+	}
+
 	return ei.updateDelegatorsInCaseOfRevert(header, body, timestampMs)
+}
+
+func (ei *elasticProcessor) removeDRWARecordsInCaseOfRevert(shardID uint32, blockHash string) error {
+	for _, index := range []string{
+		elasticIndexer.DrwaDenialsIndex,
+		elasticIndexer.DrwaIdentitiesIndex,
+		elasticIndexer.DrwaHolderComplianceIndex,
+		elasticIndexer.DrwaAttestationsIndex,
+		elasticIndexer.DrwaTokenPoliciesIndex,
+		elasticIndexer.DrwaControlEventsIndex,
+		elasticIndexer.MrvAnchoredProofsIndex,
+	} {
+		if !ei.isIndexEnabled(index) {
+			continue
+		}
+		if err := ei.removeFromIndexByBlockHashAndShardID(shardID, index, blockHash); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (ei *elasticProcessor) updateDelegatorsInCaseOfRevert(header coreData.HeaderHandler, body *block.Body, timestampMs uint64) error {
@@ -398,6 +430,48 @@ func (ei *elasticProcessor) removeFromIndexByTimestampAndShardID(shardID uint32,
 	)
 }
 
+func (ei *elasticProcessor) removeFromIndexByBlockHashAndShardID(shardID uint32, index string, blockHash string) error {
+	ctxWithValue := context.WithValue(context.Background(), request.ContextKey, request.ExtendTopicWithShardID(request.RemoveTopic, shardID))
+	query, err := json.Marshal(map[string]interface{}{
+		"query": map[string]interface{}{
+			"bool": map[string]interface{}{
+				"must": []interface{}{
+					map[string]interface{}{"term": map[string]interface{}{"shardID": shardID}},
+					map[string]interface{}{"term": map[string]interface{}{"blockHash": blockHash}},
+				},
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	return ei.elasticClient.DoQueryRemove(
+		ctxWithValue,
+		index,
+		bytes.NewBuffer(query),
+	)
+}
+
+func prepareDRWAFinalizedBlockQuery(blockHash string, shardID uint32) *bytes.Buffer {
+	query, _ := json.Marshal(map[string]interface{}{
+		"script": map[string]interface{}{
+			"source": "ctx._source.isFinalized = true",
+			"lang":   "painless",
+		},
+		"query": map[string]interface{}{
+			"bool": map[string]interface{}{
+				"must": []interface{}{
+					map[string]interface{}{"term": map[string]interface{}{"blockHash": blockHash}},
+					map[string]interface{}{"term": map[string]interface{}{"shardID": shardID}},
+				},
+			},
+		},
+	})
+
+	return bytes.NewBuffer(query)
+}
+
 // SaveMiniblocks will prepare and save information about miniblocks in elasticsearch server
 func (ei *elasticProcessor) SaveMiniblocks(header coreData.HeaderHandler, miniBlocks []*block.MiniBlock, timestampMS uint64) error {
 	if !ei.isIndexEnabled(elasticIndexer.MiniblocksIndex) {
@@ -418,93 +492,150 @@ func (ei *elasticProcessor) SaveMiniblocks(header coreData.HeaderHandler, miniBl
 // SaveTransactions will prepare and save information about a transactions in elasticsearch server
 func (ei *elasticProcessor) SaveTransactions(obh *outport.OutportBlockWithHeader) error {
 	headerTimestamp := obh.Header.GetTimeStamp()
+	headerRound := obh.Header.GetRound()
+	headerHashHex := hex.EncodeToString(obh.BlockData.HeaderHash)
 
 	miniBlocks := append(obh.BlockData.Body.MiniBlocks, obh.BlockData.IntraShardMiniBlocks...)
 	preparedResults := ei.transactionsProc.PrepareTransactionsForDatabase(miniBlocks, obh.Header, obh.TransactionPool, ei.isImportDB(), obh.NumberOfShards, obh.BlockData.TimestampMs)
-	logsData := ei.logsAndEventsProc.ExtractDataFromLogs(obh.TransactionPool.Logs, preparedResults, headerTimestamp, obh.Header.GetShardID(), obh.NumberOfShards, obh.BlockData.TimestampMs)
+	logsData := ei.logsAndEventsProc.ExtractDataFromLogs(
+		obh.TransactionPool.Logs,
+		preparedResults,
+		headerTimestamp,
+		headerHashHex,
+		headerRound,
+		obh.Header.GetShardID(),
+		obh.NumberOfShards,
+		obh.BlockData.TimestampMs,
+	)
 
 	buffers := data.NewBufferSlice(ei.bulkRequestMaxSize)
-	err := ei.indexTransactions(preparedResults.Transactions, logsData.TxHashStatusInfo, obh.Header, buffers)
-	if err != nil {
-		return err
-	}
 
-	err = ei.prepareAndIndexOperations(preparedResults.Transactions, logsData.TxHashStatusInfo, obh.Header, preparedResults.ScResults, buffers, ei.isImportDB())
-	if err != nil {
+	if err := ei.indexTransactions(preparedResults.Transactions, logsData.TxHashStatusInfo, obh.Header, buffers); err != nil {
 		return err
 	}
-
-	err = ei.indexTransactionsFeeData(preparedResults.TxHashFee, buffers)
-	if err != nil {
+	if err := ei.prepareAndIndexOperations(preparedResults.Transactions, logsData.TxHashStatusInfo, obh.Header, preparedResults.ScResults, buffers, ei.isImportDB()); err != nil {
 		return err
 	}
-
-	err = ei.indexNFTCreateInfo(logsData.Tokens, obh.AlteredAccounts, buffers, obh.ShardID)
-	if err != nil {
+	if err := ei.indexTransactionsFeeData(preparedResults.TxHashFee, buffers); err != nil {
 		return err
 	}
-
-	err = ei.indexLogs(logsData.DBLogs, buffers)
-	if err != nil {
+	if err := ei.indexScResults(preparedResults.ScResults, buffers); err != nil {
 		return err
 	}
-
-	err = ei.indexEvents(logsData.DBEvents, buffers)
-	if err != nil {
+	if err := ei.indexReceipts(preparedResults.Receipts, buffers); err != nil {
 		return err
 	}
-
-	err = ei.indexScResults(preparedResults.ScResults, buffers)
-	if err != nil {
-		return err
-	}
-
-	err = ei.indexReceipts(preparedResults.Receipts, buffers)
-	if err != nil {
-		return err
-	}
-
-	tagsCount := tags.NewTagsCount()
-	err = ei.indexAlteredAccounts(logsData.NFTsDataUpdates, obh.AlteredAccounts, buffers, tagsCount, obh.Header.GetShardID(), obh.BlockData.TimestampMs)
-	if err != nil {
-		return err
-	}
-
-	err = ei.prepareAndIndexTagsCount(tagsCount, buffers)
-	if err != nil {
-		return err
-	}
-
-	err = ei.indexTokens(logsData.TokensInfo, logsData.NFTsDataUpdates, buffers, obh.ShardID)
-	if err != nil {
-		return err
-	}
-
-	err = ei.prepareAndIndexDelegators(logsData.Delegators, buffers)
-	if err != nil {
-		return err
-	}
-
-	err = ei.indexNFTBurnInfo(logsData.TokensSupply, buffers, obh.ShardID)
-	if err != nil {
-		return err
-	}
-
-	err = ei.prepareAndIndexRolesData(logsData.TokenRolesAndProperties, buffers, elasticIndexer.TokensIndex)
-	if err != nil {
-		return err
-	}
-	err = ei.prepareAndIndexRolesData(logsData.TokenRolesAndProperties, buffers, elasticIndexer.ESDTsIndex)
-	if err != nil {
-		return err
-	}
-
-	err = ei.indexScDeploys(logsData.ScDeploys, logsData.ChangeOwnerOperations, buffers)
-	if err != nil {
+	if err := ei.indexLogsData(logsData, obh, buffers); err != nil {
 		return err
 	}
 
 	return ei.doBulkRequests("", buffers.Buffers(), obh.ShardID)
+}
+
+func (ei *elasticProcessor) indexLogsData(logsData *data.PreparedLogsResults, obh *outport.OutportBlockWithHeader, buffers *data.BufferSlice) error {
+	tagsCount := tags.NewTagsCount()
+
+	if err := ei.indexNFTCreateInfo(logsData.Tokens, obh.AlteredAccounts, buffers, obh.ShardID); err != nil {
+		return err
+	}
+	if err := ei.indexLogs(logsData.DBLogs, buffers); err != nil {
+		return err
+	}
+	if err := ei.indexEvents(logsData.DBEvents, buffers); err != nil {
+		return err
+	}
+	if err := ei.indexAlteredAccounts(logsData.NFTsDataUpdates, obh.AlteredAccounts, buffers, tagsCount, obh.Header.GetShardID(), obh.BlockData.TimestampMs); err != nil {
+		return err
+	}
+	if err := ei.prepareAndIndexTagsCount(tagsCount, buffers); err != nil {
+		return err
+	}
+	if err := ei.indexTokens(logsData.TokensInfo, logsData.NFTsDataUpdates, buffers, obh.ShardID); err != nil {
+		return err
+	}
+	if err := ei.prepareAndIndexDelegators(logsData.Delegators, buffers); err != nil {
+		return err
+	}
+	if err := ei.indexNFTBurnInfo(logsData.TokensSupply, buffers, obh.ShardID); err != nil {
+		return err
+	}
+	if err := ei.prepareAndIndexRolesData(logsData.TokenRolesAndProperties, buffers, elasticIndexer.TokensIndex); err != nil {
+		return err
+	}
+	if err := ei.prepareAndIndexRolesData(logsData.TokenRolesAndProperties, buffers, elasticIndexer.ESDTsIndex); err != nil {
+		return err
+	}
+	if err := ei.indexScDeploys(logsData.ScDeploys, logsData.ChangeOwnerOperations, buffers); err != nil {
+		return err
+	}
+	if err := ei.indexDRWADenials(logsData.DrwaDenials, buffers); err != nil {
+		return err
+	}
+	if err := ei.indexDRWAIdentities(logsData.DrwaIdentities, buffers); err != nil {
+		return err
+	}
+	if err := ei.indexDRWAHolderCompliance(logsData.DrwaHolderCompliance, buffers); err != nil {
+		return err
+	}
+	if err := ei.indexDRWAAttestations(logsData.DrwaAttestations, buffers); err != nil {
+		return err
+	}
+	if err := ei.indexDRWATokenPolicies(logsData.DrwaTokenPolicies, buffers); err != nil {
+		return err
+	}
+	if err := ei.indexDRWAControlEvents(logsData.DrwaControlEvents, buffers); err != nil {
+		return err
+	}
+	return ei.indexMRVAnchoredProofs(logsData.MrvAnchoredProofs, buffers)
+}
+
+func (ei *elasticProcessor) indexDRWADenials(records []*data.DrwaDenialRecord, buffSlice *data.BufferSlice) error {
+	if len(records) == 0 || !ei.isIndexEnabled(elasticIndexer.DrwaDenialsIndex) {
+		return nil
+	}
+	return ei.logsAndEventsProc.SerializeDRWADenials(records, buffSlice, elasticIndexer.DrwaDenialsIndex)
+}
+
+func (ei *elasticProcessor) indexDRWAIdentities(records []*data.DrwaIdentityRecord, buffSlice *data.BufferSlice) error {
+	if len(records) == 0 || !ei.isIndexEnabled(elasticIndexer.DrwaIdentitiesIndex) {
+		return nil
+	}
+	return ei.logsAndEventsProc.SerializeDRWAIdentities(records, buffSlice, elasticIndexer.DrwaIdentitiesIndex)
+}
+
+func (ei *elasticProcessor) indexDRWAHolderCompliance(records []*data.DrwaHolderComplianceRecord, buffSlice *data.BufferSlice) error {
+	if len(records) == 0 || !ei.isIndexEnabled(elasticIndexer.DrwaHolderComplianceIndex) {
+		return nil
+	}
+	return ei.logsAndEventsProc.SerializeDRWAHolderCompliance(records, buffSlice, elasticIndexer.DrwaHolderComplianceIndex)
+}
+
+func (ei *elasticProcessor) indexDRWAAttestations(records []*data.DrwaAttestationRecord, buffSlice *data.BufferSlice) error {
+	if len(records) == 0 || !ei.isIndexEnabled(elasticIndexer.DrwaAttestationsIndex) {
+		return nil
+	}
+	return ei.logsAndEventsProc.SerializeDRWAAttestations(records, buffSlice, elasticIndexer.DrwaAttestationsIndex)
+}
+
+func (ei *elasticProcessor) indexDRWATokenPolicies(records []*data.DrwaTokenPolicyRecord, buffSlice *data.BufferSlice) error {
+	if len(records) == 0 || !ei.isIndexEnabled(elasticIndexer.DrwaTokenPoliciesIndex) {
+		return nil
+	}
+	return ei.logsAndEventsProc.SerializeDRWATokenPolicies(records, buffSlice, elasticIndexer.DrwaTokenPoliciesIndex)
+}
+
+func (ei *elasticProcessor) indexDRWAControlEvents(records []*data.DrwaControlEventRecord, buffSlice *data.BufferSlice) error {
+	if len(records) == 0 || !ei.isIndexEnabled(elasticIndexer.DrwaControlEventsIndex) {
+		return nil
+	}
+	return ei.logsAndEventsProc.SerializeDRWAControlEvents(records, buffSlice, elasticIndexer.DrwaControlEventsIndex)
+}
+
+func (ei *elasticProcessor) indexMRVAnchoredProofs(records []*data.MrvAnchoredProofRecord, buffSlice *data.BufferSlice) error {
+	if len(records) == 0 || !ei.isIndexEnabled(elasticIndexer.MrvAnchoredProofsIndex) {
+		return nil
+	}
+	return ei.logsAndEventsProc.SerializeMRVAnchoredProofs(records, buffSlice, elasticIndexer.MrvAnchoredProofsIndex)
 }
 
 func (ei *elasticProcessor) prepareAndIndexRolesData(tokenRolesAndProperties *tokeninfo.TokenRolesAndProperties, buffSlice *data.BufferSlice, index string) error {
@@ -776,6 +907,47 @@ func (ei *elasticProcessor) saveAccounts(accts []*data.Account, buffSlice *data.
 	}
 
 	return ei.saveAccountsHistory(accountsMap, buffSlice, shardID, timestampMs)
+}
+
+// FinalizedBlock marks DRWA records produced from the finalized block as finalized.
+// The finalized-block topic only carries shard ID and header hash, so this update is
+// keyed by the stored block hash metadata on DRWA event-history records.
+func (ei *elasticProcessor) FinalizedBlock(finalizedBlock *outport.FinalizedBlock) error {
+	if finalizedBlock == nil {
+		return nil
+	}
+
+	blockHashHex := hex.EncodeToString(finalizedBlock.HeaderHash)
+	if blockHashHex == "" {
+		return nil
+	}
+
+	query := prepareDRWAFinalizedBlockQuery(blockHashHex, finalizedBlock.ShardID)
+	ctxWithValue := context.WithValue(
+		context.Background(),
+		request.ContextKey,
+		request.ExtendTopicWithShardID(request.UpdateTopic, finalizedBlock.ShardID),
+	)
+
+	for _, index := range []string{
+		elasticIndexer.DrwaDenialsIndex,
+		elasticIndexer.DrwaIdentitiesIndex,
+		elasticIndexer.DrwaHolderComplianceIndex,
+		elasticIndexer.DrwaAttestationsIndex,
+		elasticIndexer.DrwaTokenPoliciesIndex,
+		elasticIndexer.DrwaControlEventsIndex,
+		elasticIndexer.MrvAnchoredProofsIndex,
+	} {
+		if !ei.isIndexEnabled(index) {
+			continue
+		}
+
+		if err := ei.elasticClient.UpdateByQuery(ctxWithValue, index, query); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (ei *elasticProcessor) indexAccounts(accountsMap map[string]*data.AccountInfo, index string, buffSlice *data.BufferSlice) error {

@@ -153,8 +153,24 @@ func readConfig(ctx *cli.Context) (*config.Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	applyEnvironmentOverrides(cfg)
 
 	return cfg, nil
+}
+
+func applyEnvironmentOverrides(cfg *config.Config) {
+	if value := os.Getenv("BALANCE_CHECKER_ES_URL"); value != "" {
+		cfg.Elasticsearch.URL = value
+	}
+	if value := os.Getenv("BALANCE_CHECKER_ES_USERNAME"); value != "" {
+		cfg.Elasticsearch.Username = value
+	}
+	if value := os.Getenv("BALANCE_CHECKER_ES_PASSWORD"); value != "" {
+		cfg.Elasticsearch.Password = value
+	}
+	if value := os.Getenv("BALANCE_CHECKER_PROXY_URL"); value != "" {
+		cfg.Proxy.URL = value
+	}
 }
 
 func initializeLogger(ctx *cli.Context) (closing.Closer, error) {

@@ -14,6 +14,8 @@ var log = logger.GetOrCreate("api/gin")
 // ErrNilHttpServer signals that a nil http server has been provided
 var ErrNilHttpServer = errors.New("nil http server")
 
+const gracefulShutdownTimeout = 10 * time.Second
+
 type httpServer struct {
 	server server
 }
@@ -47,7 +49,7 @@ func (h *httpServer) Start() {
 
 // Close will handle the stopping of the gin web server
 func (h *httpServer) Close() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), gracefulShutdownTimeout)
 	defer cancel()
 
 	return h.server.Shutdown(ctx)

@@ -157,9 +157,25 @@ func PrepareNFTUpdateData(buffSlice *data.BufferSlice, updateNFTData []*data.NFT
 				}
 			}
 `
-		serializedData := []byte(fmt.Sprintf(`{"script": {"source": "%s","lang": "painless","params": {"attributes": "%s", "metadata": "%s", "tags": %s}}, "upsert": {}}`,
-			FormatPainlessSource(codeToExecute), base64Attr, newMetadata, marshalizedTags),
-		)
+		var tags []string
+		if err := json.Unmarshal(marshalizedTags, &tags); err != nil {
+			return err
+		}
+		serializedData, err := json.Marshal(map[string]interface{}{
+			"script": map[string]interface{}{
+				"source": FormatPainlessSource(codeToExecute),
+				"lang":   "painless",
+				"params": map[string]interface{}{
+					"attributes": base64Attr,
+					"metadata":   newMetadata,
+					"tags":       tags,
+				},
+			},
+			"upsert": map[string]interface{}{},
+		})
+		if err != nil {
+			return err
+		}
 		if len(nftUpdate.URIsToAdd) != 0 {
 			uris := make([]string, 0, len(nftUpdate.URIsToAdd))
 			for _, uri := range nftUpdate.URIsToAdd {
@@ -196,7 +212,7 @@ func PrepareNFTUpdateData(buffSlice *data.BufferSlice, updateNFTData []*data.NFT
 			serializedData = []byte(fmt.Sprintf(`{"script": {"source": "%s","lang": "painless","params": {"uris": %s, "set":%t}},"upsert": {}}`, FormatPainlessSource(codeToExecute), marshalizedURIS, nftUpdate.SetURIs))
 		}
 
-		err := buffSlice.PutData(metaData, serializedData)
+		err = buffSlice.PutData(metaData, serializedData)
 		if err != nil {
 			return err
 		}

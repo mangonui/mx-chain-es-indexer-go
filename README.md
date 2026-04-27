@@ -101,7 +101,15 @@ The **_[prefs.toml](./cmd/elasticindexer/config/prefs.toml)_** file:
 
 ```toml
 [config]
-    disabled-indices = []
+    disabled-indices = [
+        "drwa-denials",
+        "drwa-identities",
+        "drwa-holder-compliance",
+        "drwa-attestations",
+        "drwa-token-policies",
+        "drwa-control-events",
+        "mrv-anchored-proofs",
+    ]
     [config.web-socket]
         # URL for the WebSocket client/server connection
         # This value represents the IP address and port number that the WebSocket client or server will use to establish a connection.
@@ -126,6 +134,34 @@ The **_[prefs.toml](./cmd/elasticindexer/config/prefs.toml)_** file:
         password = ""
         bulk-request-max-size-in-bytes = 4194304 # 4MB
 ```
+
+If you want to enable DRWA indices, configure the emitter allow-list in
+_**[config.toml](./cmd/elasticindexer/config/config.toml)**_ first:
+
+```toml
+[config.drwa]
+    authorized-emitters = [
+        "erd1...", # deployed DRWA contract address
+        "erd1...", # deployed DRWA contract address
+    ]
+```
+
+DRWA indexing is intentionally fail-closed. If any DRWA indices are enabled and
+`authorized-emitters` is empty, `elasticindexer` startup fails instead of
+trusting arbitrary contracts that emit DRWA-shaped event identifiers.
+
+MRV anchored-proof indexing has the same fail-closed emitter policy:
+
+```toml
+[config.mrv]
+    authorized-emitters = [
+        "erd1...", # deployed MRV registry contract address
+    ]
+```
+
+If `mrv-anchored-proofs` is enabled and `[config.mrv].authorized-emitters`
+is empty, startup fails rather than indexing MRV-shaped events from arbitrary
+contracts.
 
 The _**[api.toml](./cmd/elasticindexer/config/api.toml)**_ file:
 ```toml

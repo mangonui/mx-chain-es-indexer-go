@@ -2,8 +2,18 @@
     available-indices =  [
         "rating", "transactions", "blocks", "validators", "miniblocks", "rounds", "accounts", "accountshistory",
         "receipts", "scresults", "accountsesdt", "accountsesdthistory", "epochinfo", "scdeploys", "tokens", "tags",
-        "logs", "delegators", "operations", "esdts", "values", "events"
+        "logs", "delegators", "operations", "esdts", "values", "events",
+        "drwa-denials", "drwa-holder-compliance", "drwa-attestations", "drwa-token-policies", "drwa-control-events",
+        "mrv-anchored-proofs"
     ]
+    [config.drwa]
+        # DRWA event indexing is fail-closed: if any DRWA indices are enabled,
+        # authorized emitters must be declared here as bech32 addresses or 0x-prefixed 32-byte hex.
+        authorized-emitters = []
+    [config.mrv]
+        # MRV event indexing is fail-closed: if MRV indices are enabled,
+        # authorized emitters must be declared here as bech32 addresses or 0x-prefixed 32-byte hex.
+        authorized-emitters = []
     [config.address-converter]
         length = 32
         type = "bech32"

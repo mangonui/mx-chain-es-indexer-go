@@ -39,4 +39,11 @@ type PreparedLogsResults struct {
 	TokenRolesAndProperties *tokeninfo.TokenRolesAndProperties
 	DBLogs                  []*Logs
 	DBEvents                []*LogEvent
+	DrwaDenials             []*DrwaDenialRecord
+	DrwaIdentities          []*DrwaIdentityRecord
+	DrwaHolderCompliance    []*DrwaHolderComplianceRecord
+	DrwaAttestations        []*DrwaAttestationRecord
+	DrwaTokenPolicies       []*DrwaTokenPolicyRecord
+	DrwaControlEvents       []*DrwaControlEventRecord
+	MrvAnchoredProofs       []*MrvAnchoredProofRecord
 }

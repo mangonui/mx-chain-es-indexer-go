@@ -9,6 +9,8 @@ import (
 type logsData struct {
 	timestamp               uint64
 	timestampMs             uint64
+	blockHash               string
+	blockRound              uint64
 	txHashStatusInfoProc    txHashStatusInfoHandler
 	tokens                  data.TokensHandler
 	tokensSupply            data.TokensHandler
@@ -20,6 +22,13 @@ type logsData struct {
 	tokensInfo              []*data.TokenInfo
 	nftsDataUpdates         []*data.NFTDataUpdate
 	tokenRolesAndProperties *tokeninfo.TokenRolesAndProperties
+	drwaDenials             []*data.DrwaDenialRecord
+	drwaIdentities          []*data.DrwaIdentityRecord
+	drwaHolderCompliance    []*data.DrwaHolderComplianceRecord
+	drwaAttestations        []*data.DrwaAttestationRecord
+	drwaTokenPolicies       []*data.DrwaTokenPolicyRecord
+	drwaControlEvents       []*data.DrwaControlEventRecord
+	mrvAnchoredProofs       []*data.MrvAnchoredProofRecord
 }
 
 func newLogsData(
@@ -27,6 +36,8 @@ func newLogsData(
 	txs []*data.Transaction,
 	scrs []*data.ScResult,
 	timestampMs uint64,
+	blockHash string,
+	blockRound uint64,
 ) *logsData {
 	ld := &logsData{}
 
@@ -35,6 +46,8 @@ func newLogsData(
 	ld.tokens = data.NewTokensInfo()
 	ld.tokensSupply = data.NewTokensInfo()
 	ld.timestamp = timestamp
+	ld.blockHash = blockHash
+	ld.blockRound = blockRound
 	ld.scDeploys = make(map[string]*data.ScDeployInfo)
 	ld.tokensInfo = make([]*data.TokenInfo, 0)
 	ld.delegators = make(map[string]*data.Delegator)
@@ -43,6 +56,13 @@ func newLogsData(
 	ld.tokenRolesAndProperties = tokeninfo.NewTokenRolesAndProperties()
 	ld.txHashStatusInfoProc = newTxHashStatusInfoProcessor()
 	ld.timestampMs = timestampMs
+	ld.drwaDenials = make([]*data.DrwaDenialRecord, 0)
+	ld.drwaIdentities = make([]*data.DrwaIdentityRecord, 0)
+	ld.drwaHolderCompliance = make([]*data.DrwaHolderComplianceRecord, 0)
+	ld.drwaAttestations = make([]*data.DrwaAttestationRecord, 0)
+	ld.drwaTokenPolicies = make([]*data.DrwaTokenPolicyRecord, 0)
+	ld.drwaControlEvents = make([]*data.DrwaControlEventRecord, 0)
+	ld.mrvAnchoredProofs = make([]*data.MrvAnchoredProofRecord, 0)
 
 	return ld
 }

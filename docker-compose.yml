@@ -1,4 +1,7 @@
 services:
+  # Development-only Elasticsearch profile.
+  # Security is disabled here for local testing, and all published ports are
+  # bound to loopback so this compose file is not network-exposed by default.
   elasticsearch:
     container_name: es-container
     image: docker.elastic.co/elasticsearch/elasticsearch:7.16.1
@@ -13,8 +16,8 @@ services:
     networks:
       - es-net
     ports:
-      - "9200:9200"
-      - "9300:9300"
+      - "127.0.0.1:9200:9200"
+      - "127.0.0.1:9300:9300"
   kibana:
     container_name: kb-container
     image: docker.elastic.co/kibana/kibana:7.16.1
@@ -25,7 +28,7 @@ services:
     depends_on:
       - elasticsearch
     ports:
-      - "5601:5601"
+      - "127.0.0.1:5601:5601"
 networks:
   es-net:
     driver: bridge

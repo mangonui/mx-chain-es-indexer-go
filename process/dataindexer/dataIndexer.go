@@ -127,6 +127,21 @@ func (di *dataIndexer) saveBlockData(outportBlock *outport.OutportBlock, header 
 			err, hex.EncodeToString(headerHash), headerNonce)
 	}
 
+	// Use the highest-final block metadata that already travels with every
+	// SaveBlock payload as an idempotent repair path for missed
+	// TopicFinalizedBlock deliveries. Re-applying finalization is safe because
+	// the underlying update is a monotonic `isFinalized = true`.
+	if len(outportBlock.GetHighestFinalBlockHash()) > 0 {
+		err = di.elasticProcessor.FinalizedBlock(&outport.FinalizedBlock{
+			ShardID:    header.GetShardID(),
+			HeaderHash: outportBlock.GetHighestFinalBlockHash(),
+		})
+		if err != nil {
+			return fmt.Errorf("%w when repairing finalized block state from save-block path, finalized hash %s, block hash %s, nonce %d",
+				err, hex.EncodeToString(outportBlock.GetHighestFinalBlockHash()), hex.EncodeToString(headerHash), headerNonce)
+		}
+	}
+
 	return nil
 }
 
@@ -180,9 +195,13 @@ func (di *dataIndexer) SaveAccounts(accounts *outport.Accounts) error {
 	return di.elasticProcessor.SaveAccounts(accounts)
 }
 
-// FinalizedBlock returns nil
-func (di *dataIndexer) FinalizedBlock(_ *outport.FinalizedBlock) error {
-	return nil
+// FinalizedBlock marks records from the finalized header as finalized in the backing store.
+func (di *dataIndexer) FinalizedBlock(finalizedBlock *outport.FinalizedBlock) error {
+	if finalizedBlock == nil {
+		return nil
+	}
+
+	return di.elasticProcessor.FinalizedBlock(finalizedBlock)
 }
 
 // GetMarshaller return the marshaller

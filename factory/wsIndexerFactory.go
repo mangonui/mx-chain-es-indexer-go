@@ -97,6 +97,8 @@ func createDataIndexer(
 		HeaderMarshaller:         wsMarshaller,
 		StatusMetrics:            statusMetrics,
 		Version:                  version,
+		DRWAAuthorizedEmitters:   cfg.Config.DRWA.AuthorizedEmitters,
+		MRVAuthorizedEmitters:    cfg.Config.MRV.AuthorizedEmitters,
 		EnableEpochsConfig:       enableEpochsCfg,
 	})
 }

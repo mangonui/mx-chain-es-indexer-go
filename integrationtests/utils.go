@@ -52,16 +52,43 @@ func decodeAddress(address string) []byte {
 func CreateElasticProcessor(
 	esClient elasticproc.DatabaseClientHandler,
 ) (dataindexer.ElasticProcessor, error) {
+	return CreateElasticProcessorWithIndexes(esClient, []string{
+		dataindexer.TransactionsIndex, dataindexer.LogsIndex, dataindexer.AccountsESDTIndex, dataindexer.ScResultsIndex,
+		dataindexer.ReceiptsIndex, dataindexer.BlockIndex, dataindexer.AccountsIndex, dataindexer.TokensIndex, dataindexer.TagsIndex, dataindexer.EventsIndex,
+		dataindexer.OperationsIndex, dataindexer.DelegatorsIndex, dataindexer.ESDTsIndex, dataindexer.SCDeploysIndex, dataindexer.MiniblocksIndex, dataindexer.ValuesIndex,
+	})
+}
+
+// CreateElasticProcessorWithIndexes allows integration tests to opt into specialized
+// index surfaces such as DRWA without widening the default helper for unrelated suites.
+func CreateElasticProcessorWithIndexes(
+	esClient elasticproc.DatabaseClientHandler,
+	enabledIndexes []string,
+) (dataindexer.ElasticProcessor, error) {
+	drwaAuthorizedEmitters := make([]string, 0, 1)
+	for _, index := range enabledIndexes {
+		switch index {
+		case dataindexer.DrwaDenialsIndex,
+			dataindexer.DrwaIdentitiesIndex,
+			dataindexer.DrwaHolderComplianceIndex,
+			dataindexer.DrwaAttestationsIndex,
+			dataindexer.DrwaTokenPoliciesIndex,
+			dataindexer.DrwaControlEventsIndex:
+			drwaAuthorizedEmitters = append(drwaAuthorizedEmitters, drwaTestEmitter)
+			goto args
+		}
+	}
+
+args:
 	args := factory.ArgElasticProcessorFactory{
 		Marshalizer:              &mock.MarshalizerMock{},
 		Hasher:                   &mock.HasherMock{},
 		AddressPubkeyConverter:   pubKeyConverter,
 		ValidatorPubkeyConverter: mock.NewPubkeyConverterMock(32),
 		DBClient:                 esClient,
-		EnabledIndexes: []string{dataindexer.TransactionsIndex, dataindexer.LogsIndex, dataindexer.AccountsESDTIndex, dataindexer.ScResultsIndex,
-			dataindexer.ReceiptsIndex, dataindexer.BlockIndex, dataindexer.AccountsIndex, dataindexer.TokensIndex, dataindexer.TagsIndex, dataindexer.EventsIndex,
-			dataindexer.OperationsIndex, dataindexer.DelegatorsIndex, dataindexer.ESDTsIndex, dataindexer.SCDeploysIndex, dataindexer.MiniblocksIndex, dataindexer.ValuesIndex},
-		Denomination: 18,
+		EnabledIndexes:           enabledIndexes,
+		DRWAAuthorizedEmitters:   drwaAuthorizedEmitters,
+		Denomination:             18,
 		EnableEpochsConfig: config.EnableEpochsConfig{
 			RelayedTransactionsV1V2DisableEpoch: 1,
 		},
