@@ -55,6 +55,11 @@ type ClusterConfig struct {
 			Password                  string `toml:"password"`
 			BulkRequestMaxSizeInBytes int    `toml:"bulk-request-max-size-in-bytes"`
 			NumWritesInParallel       int    `toml:"num-writes-in-parallel"`
+			// AllowInsecureNoAuthDev opts out of the credential check in
+			// loadClusterConfig. Reserved for local development against an
+			// elasticsearch cluster with security disabled; production
+			// configs must set username + password.
+			AllowInsecureNoAuthDev bool `toml:"allow-insecure-no-auth-dev"`
 		} `toml:"elastic-cluster"`
 	} `toml:"config"`
 }
