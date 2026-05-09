@@ -136,14 +136,9 @@ func PrepareNFTUpdateData(buffSlice *data.BufferSlice, updateNFTData []*data.NFT
 		newTags := TruncateSliceElementsIfExceedsMaxLength(ExtractTagsFromAttributes(nftUpdate.NewAttributes))
 		newMetadata := ExtractMetaDataFromAttributes(nftUpdate.NewAttributes)
 
-		marshalizedTags, errM := json.Marshal(newTags)
-		if errM != nil {
-			return errM
-		}
-
 		codeToExecute := `
-			if (ctx._source.containsKey('data')) {
-				ctx._source.data.attributes = params.attributes;
+				if (ctx._source.containsKey('data')) {
+					ctx._source.data.attributes = params.attributes;
 				if (!params.metadata.isEmpty() ) {
 					ctx._source.data.metadata = params.metadata
 				} else {
@@ -158,11 +153,32 @@ func PrepareNFTUpdateData(buffSlice *data.BufferSlice, updateNFTData []*data.NFT
 						ctx._source.data.remove('tags')
 					}
 				}
-			}
-`
-		serializedData := []byte(fmt.Sprintf(`{"script": {"source": "%s","lang": "painless","params": {"attributes": "%s", "metadata": "%s", "tags": %s}}, "upsert": {}}`,
-			FormatPainlessSource(codeToExecute), base64Attr, newMetadata, marshalizedTags),
-		)
+				}
+	`
+		payload := struct {
+			Script struct {
+				Source string `json:"source"`
+				Lang   string `json:"lang"`
+				Params struct {
+					Attributes string   `json:"attributes"`
+					Metadata   string   `json:"metadata"`
+					Tags       []string `json:"tags"`
+				} `json:"params"`
+			} `json:"script"`
+			Upsert map[string]interface{} `json:"upsert"`
+		}{
+			Upsert: map[string]interface{}{},
+		}
+		payload.Script.Source = FormatPainlessSource(codeToExecute)
+		payload.Script.Lang = "painless"
+		payload.Script.Params.Attributes = base64Attr
+		payload.Script.Params.Metadata = newMetadata
+		payload.Script.Params.Tags = newTags
+
+		serializedData, err := json.Marshal(payload)
+		if err != nil {
+			return err
+		}
 		if len(nftUpdate.URIsToAdd) != 0 {
 			uris := make([]string, 0, len(nftUpdate.URIsToAdd))
 			for _, uri := range nftUpdate.URIsToAdd {
