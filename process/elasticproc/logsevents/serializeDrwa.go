@@ -122,8 +122,12 @@ func (lep *logsAndEventsProcessor) SerializeDRWAControlEvents(records []*data.Dr
 }
 
 func prepareDRWARecord(id string, index string, record any) ([]byte, []byte, error) {
+	return prepareRecordWithLabel(id, index, record, "DRWA")
+}
+
+func prepareRecordWithLabel(id string, index string, record any, label string) ([]byte, []byte, error) {
 	if len(id) > maxDRWADocumentIDLength {
-		return nil, nil, errors.New("DRWA document id exceeds maximum length")
+		return nil, nil, errors.New(label + " document id exceeds maximum length")
 	}
 
 	serialized, err := json.Marshal(record)

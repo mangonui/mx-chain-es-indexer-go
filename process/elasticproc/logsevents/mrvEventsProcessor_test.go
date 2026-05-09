@@ -165,6 +165,23 @@ func TestMRVEventsProcessorRejectsNonV2CanonicalPayloadShape(t *testing.T) {
 	require.Nil(t, res.mrvAnchoredProof)
 }
 
+func TestMRVEventsProcessorRejectsNonCanonicalTextFields(t *testing.T) {
+	t.Parallel()
+
+	proc := newTestMRVEventsProcessorAllowAll()
+	event := mrvAnchoredEvent()
+	event.Topics[0] = []byte("report with spaces")
+
+	res := proc.processEvent(&argsProcessEvent{
+		event:            event,
+		txs:              map[string]*data.Transaction{},
+		txHashHexEncoded: "hash",
+	})
+
+	require.True(t, res.processed)
+	require.Nil(t, res.mrvAnchoredProof)
+}
+
 func mrvAnchoredEvent() *transaction.Event {
 	return &transaction.Event{
 		Identifier: []byte(mrvReportAnchoredV2Event),

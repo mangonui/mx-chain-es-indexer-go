@@ -3,6 +3,7 @@ package logsevents
 import (
 	"encoding/binary"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/multiversx/mx-chain-es-indexer-go/data"
 )
@@ -102,6 +103,9 @@ func (dep *mrvEventsProcessor) tryBuildAnchoredProofRecord(identifier string, ar
 	if len(topics) != mrvReportV2TopicCount || len(additionalData) != mrvReportV2AdditionalDataCount {
 		return nil
 	}
+	if !isCanonicalMRVFields(topics, additionalData) {
+		return nil
+	}
 
 	return &data.MrvAnchoredProofRecord{
 		TxHash:               args.txHashHexEncoded,
@@ -125,6 +129,44 @@ func (dep *mrvEventsProcessor) tryBuildAnchoredProofRecord(identifier string, ar
 		Timestamp:            args.timestamp,
 		TimestampMs:          args.timestampMs,
 	}
+}
+
+func isCanonicalMRVFields(topics [][]byte, additionalData [][]byte) bool {
+	for _, field := range topics {
+		if !isCanonicalMRVText(field, 256) {
+			return false
+		}
+	}
+
+	for idx, field := range additionalData {
+		if idx == 3 || idx == 4 {
+			continue
+		}
+		if !isCanonicalMRVText(field, 512) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func isCanonicalMRVText(field []byte, maxLen int) bool {
+	if len(field) == 0 || len(field) > maxLen || !utf8.Valid(field) {
+		return false
+	}
+	for _, r := range string(field) {
+		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' {
+			continue
+		}
+		switch r {
+		case '.', '_', ':', '-':
+			continue
+		default:
+			return false
+		}
+	}
+
+	return true
 }
 
 func getMRVAdditionalData(args *argsProcessEvent) [][]byte {
