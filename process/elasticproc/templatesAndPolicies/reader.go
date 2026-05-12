@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/multiversx/mx-chain-es-indexer-go/core"
 	indexer "github.com/multiversx/mx-chain-es-indexer-go/process/dataindexer"
 	"github.com/multiversx/mx-chain-es-indexer-go/templates"
 	"github.com/multiversx/mx-chain-es-indexer-go/templates/indices"
@@ -192,13 +193,13 @@ func getDataFromByIndex(path string, index string) (*bytes.Buffer, error) {
 	filePath := filepath.Join(path, fileName)
 	fileBytes, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("getDataFromByIndex: %w, path %s, error %s", err, filePath, err.Error())
+		return nil, fmt.Errorf("getDataFromByIndex: %w, path %s, error %s", err, filePath, core.SanitizeLogError(err))
 	}
 
 	indexTemplate.Grow(len(fileBytes))
 	_, err = indexTemplate.Write(fileBytes)
 	if err != nil {
-		return nil, fmt.Errorf("getDataFromByIndex: %w, path %s, error %s", err, filePath, err.Error())
+		return nil, fmt.Errorf("getDataFromByIndex: %w, path %s, error %s", err, filePath, core.SanitizeLogError(err))
 	}
 
 	return indexTemplate, nil

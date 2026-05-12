@@ -9,6 +9,7 @@ import (
 	"github.com/multiversx/mx-chain-core-go/data/alteredAccount"
 	"github.com/multiversx/mx-chain-core-go/data/esdt"
 	"github.com/multiversx/mx-chain-core-go/marshal"
+	esindexercore "github.com/multiversx/mx-chain-es-indexer-go/core"
 	"github.com/multiversx/mx-chain-es-indexer-go/data"
 	"github.com/multiversx/mx-chain-es-indexer-go/process/elasticproc/converters"
 	logger "github.com/multiversx/mx-chain-logger-go"
@@ -142,7 +143,7 @@ func (np *nftsProcessor) processNFTEventOnSender(
 	esdtToken := &esdt.ESDigitalToken{}
 	err := np.marshalizer.Unmarshal(esdtToken, esdtTokenBytes)
 	if err != nil {
-		log.Warn("nftsProcessor.processNFTEventOnSender() cannot urmarshal", "error", err.Error())
+		log.Warn("nftsProcessor.processNFTEventOnSender() cannot urmarshal", "error", esindexercore.SanitizeLogError(err))
 		return
 	}
 

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/elastic/go-elasticsearch/v7/esapi"
+	"github.com/multiversx/mx-chain-es-indexer-go/core"
 	"github.com/multiversx/mx-chain-es-indexer-go/process/dataindexer"
 )
 
@@ -16,13 +17,13 @@ func exists(res *esapi.Response, err error) bool {
 		if res != nil && res.Body != nil {
 			err = res.Body.Close()
 			if err != nil {
-				log.Warn("elasticClient.exists", "could not close body: ", err.Error())
+				log.Warn("elasticClient.exists", "could not close body: ", core.SanitizeLogError(err))
 			}
 		}
 	}()
 
 	if err != nil {
-		log.Warn("elasticClient.IndexExists", "could not check index on the elastic nodes:", err.Error())
+		log.Warn("elasticClient.IndexExists", "could not check index on the elastic nodes:", core.SanitizeLogError(err))
 		return false
 	}
 
@@ -67,7 +68,11 @@ func elasticDefaultErrorResponseHandler(res *esapi.Response) error {
 		}
 
 		return fmt.Errorf("%w, cannot unmarshal elastic response body to map[string]interface{}, "+
-			"decode error: %s, body response: %s", errToReturn, err.Error(), string(bodyBytes))
+			"decode error: %s, body response: %s",
+			errToReturn,
+			core.SanitizeLogError(err),
+			core.SanitizeLogValue(string(bodyBytes)),
+		)
 	}
 
 	if res.IsError() {
@@ -218,7 +223,7 @@ func parseResponse(res *esapi.Response, dest interface{}, errorHandler responseE
 			err := res.Body.Close()
 			if err != nil {
 				log.Warn("elasticClient.parseResponse",
-					"could not close body", err.Error())
+					"could not close body", core.SanitizeLogError(err))
 			}
 		}
 	}()
@@ -234,7 +239,7 @@ func parseResponse(res *esapi.Response, dest interface{}, errorHandler responseE
 	err := loadResponseBody(res.Body, dest)
 	if err != nil {
 		log.Warn("elasticClient.parseResponse",
-			"could not load response body:", err.Error())
+			"could not load response body:", core.SanitizeLogError(err))
 		return dataindexer.ErrBackOff
 	}
 

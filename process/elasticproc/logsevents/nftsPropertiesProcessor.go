@@ -6,6 +6,7 @@ import (
 	"github.com/multiversx/mx-chain-core-go/core"
 	"github.com/multiversx/mx-chain-core-go/data/esdt"
 	"github.com/multiversx/mx-chain-core-go/marshal"
+	esindexercore "github.com/multiversx/mx-chain-es-indexer-go/core"
 	"github.com/multiversx/mx-chain-es-indexer-go/data"
 	"github.com/multiversx/mx-chain-es-indexer-go/process/elasticproc/converters"
 )
@@ -127,7 +128,7 @@ func (npp *nftsPropertiesProc) processMetaDataUpdate(updateNFT *data.NFTDataUpda
 	esdtToken := &esdt.ESDigitalToken{}
 	err := npp.marshaller.Unmarshal(esdtToken, esdtTokenBytes)
 	if err != nil {
-		log.Warn("nftsPropertiesProc.processMetaDataRecreate() cannot urmarshal", "error", err.Error())
+		log.Warn("nftsPropertiesProc.processMetaDataRecreate() cannot urmarshal", "error", esindexercore.SanitizeLogError(err))
 		return
 	}
 

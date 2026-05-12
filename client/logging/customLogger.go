@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/multiversx/mx-chain-es-indexer-go/core"
 	logger "github.com/multiversx/mx-chain-logger-go"
 )
 
@@ -36,7 +37,7 @@ func (cl *CustomLogger) LogRoundTrip(
 	}
 
 	if err != nil {
-		log.Warn("elastic client", "error", err.Error())
+		log.Warn("elastic client", "error", core.SanitizeLogError(err))
 	}
 
 	if req != nil && res != nil {

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/multiversx/mx-chain-es-indexer-go/core"
 	logger "github.com/multiversx/mx-chain-logger-go"
 )
 
@@ -42,7 +43,7 @@ func (h *httpServer) Start() {
 		return
 	}
 
-	log.Error("could not start webserver", "error", err.Error())
+	log.Error("could not start webserver", "error", core.SanitizeLogError(err))
 }
 
 // Close will handle the stopping of the gin web server

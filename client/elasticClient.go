@@ -8,6 +8,7 @@ import (
 
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
+	"github.com/multiversx/mx-chain-es-indexer-go/core"
 	"github.com/multiversx/mx-chain-es-indexer-go/process/dataindexer"
 	logger "github.com/multiversx/mx-chain-logger-go"
 )
@@ -144,7 +145,7 @@ func (ec *elasticClient) DoBulkRequest(ctx context.Context, buff *bytes.Buffer, 
 		options...,
 	)
 	if err != nil {
-		log.Warn("elasticClient.DoBulkRequest", "error", err.Error())
+		log.Warn("elasticClient.DoBulkRequest", "error", core.SanitizeLogError(err))
 		return err
 	}
 
@@ -165,13 +166,13 @@ func (ec *elasticClient) DoMultiGet(ctx context.Context, ids []string, index str
 		ec.client.Mget.WithContext(ctx),
 	)
 	if err != nil {
-		log.Warn("elasticClient.DoMultiGet", "error", err.Error())
+		log.Warn("elasticClient.DoMultiGet", "error", core.SanitizeLogError(err))
 		return err
 	}
 
 	err = parseResponse(res, &resBody, elasticDefaultErrorResponseHandler)
 	if err != nil {
-		log.Warn("elasticClient.DoMultiGet", "error parsing response", err.Error())
+		log.Warn("elasticClient.DoMultiGet", "error parsing response", core.SanitizeLogError(err))
 		return err
 	}
 
