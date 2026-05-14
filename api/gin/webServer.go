@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -71,7 +72,18 @@ func (ws *webServer) StartHttpServer() error {
 
 	ws.registerRoutes(engine)
 
-	s := &http.Server{Addr: apiInterface, Handler: engine}
+	// ISSUE-017: the ES indexer API previously had ZERO timeouts. All four
+	// (ReadHeaderTimeout / ReadTimeout / WriteTimeout / IdleTimeout) are
+	// added defensively. WriteTimeout is the most generous (60s) to allow
+	// long ES proxying responses; the others bound slow-loris vectors.
+	s := &http.Server{
+		Addr:              apiInterface,
+		Handler:           engine,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
 	log.Debug("creating gin web sever", "interface", apiInterface)
 	ws.httpServer, err = NewHttpServer(s)
 	if err != nil {
