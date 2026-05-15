@@ -151,8 +151,27 @@ func extractErrorFromBulkItems(itemsBytes []byte) error {
 		}
 
 		count++
-		errorsString += fmt.Sprintf(`{ "index": "%s", "id": "%s", "statusCode": %d, "errorType": "%s", "reason": "%s", "causedBy": { "type": "%s", "reason": "%s", "script_stack":"%s", "script":"%s" }}\n`,
-			selectedItem.Index, selectedItem.ID, selectedItem.Status, selectedItem.Error.Type, selectedItem.Error.Reason, selectedItem.Error.Cause.Type, selectedItem.Error.Cause.Reason, selectedItem.Error.Cause.ScriptStack, selectedItem.Error.Cause.Script)
+		errMap := map[string]interface{}{
+			"index":      selectedItem.Index,
+			"id":         selectedItem.ID,
+			"statusCode": selectedItem.Status,
+			"errorType":  selectedItem.Error.Type,
+			"reason":     selectedItem.Error.Reason,
+			"causedBy": map[string]interface{}{
+				"type":         selectedItem.Error.Cause.Type,
+				"reason":       selectedItem.Error.Cause.Reason,
+				"script_stack": selectedItem.Error.Cause.ScriptStack,
+				"script":       selectedItem.Error.Cause.Script,
+			},
+		}
+
+		marshaledErr, errMarshal := json.Marshal(errMap)
+		if errMarshal != nil {
+			log.Warn("cannot marshal bulk item error", "error", errMarshal)
+			continue
+		}
+
+		errorsString += string(marshaledErr) + "\n"
 
 		if count == numOfErrorsToExtractBulkResponse {
 			break

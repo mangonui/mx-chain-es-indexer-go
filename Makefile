@@ -18,10 +18,10 @@ long-tests:
 
 start-cluster-with-kibana:
 	@echo " > Starting Elasticsearch node and Kibana"
-	docker-compose up -d
+	docker compose up -d
 
 stop-cluster:
-	docker-compose down
+	docker compose down
 
 delete-cluster-data:
 	cd scripts && /bin/bash script.sh delete

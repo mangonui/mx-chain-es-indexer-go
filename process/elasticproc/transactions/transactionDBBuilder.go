@@ -10,6 +10,7 @@ import (
 	"github.com/multiversx/mx-chain-core-go/data/outport"
 	"github.com/multiversx/mx-chain-core-go/data/receipt"
 	"github.com/multiversx/mx-chain-core-go/data/transaction"
+	indexercore "github.com/multiversx/mx-chain-es-indexer-go/core"
 	"github.com/multiversx/mx-chain-es-indexer-go/data"
 	"github.com/multiversx/mx-chain-es-indexer-go/process/dataindexer"
 	"github.com/multiversx/mx-chain-es-indexer-go/process/elasticproc/converters"
@@ -121,15 +122,15 @@ func (dtb *dbTransactionBuilder) prepareTransaction(
 
 	valueNum, err := dtb.balanceConverter.ConvertBigValueToFloat(tx.Value)
 	if err != nil {
-		log.Warn("dbTransactionBuilder.prepareTransaction: cannot compute value as num", "value", tx.Value,
-			"hash", txHash, "error", err)
+		log.Warn("dbTransactionBuilder.prepareTransaction: cannot compute value as num", "value", indexercore.SanitizeLogValue(tx.Value.String()),
+			"hash", indexercore.SanitizeLogValue(hex.EncodeToString(txHash)), "error", err)
 	}
 
 	feeInfo := getFeeInfo(txInfo)
 	feeNum, err := dtb.balanceConverter.ConvertBigValueToFloat(feeInfo.Fee)
 	if err != nil {
-		log.Warn("dbTransactionBuilder.prepareTransaction: cannot compute transaction fee as num", "fee", feeInfo.Fee,
-			"hash", txHash, "error", err)
+		log.Warn("dbTransactionBuilder.prepareTransaction: cannot compute transaction fee as num", "fee", indexercore.SanitizeLogValue(feeInfo.Fee.String()),
+			"hash", indexercore.SanitizeLogValue(hex.EncodeToString(txHash)), "error", err)
 	}
 	esdtValuesNum, err := dtb.balanceConverter.ComputeSliceOfStringsAsFloat(res.ESDTValues)
 	if err != nil {

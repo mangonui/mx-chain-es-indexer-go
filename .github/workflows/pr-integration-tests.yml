@@ -22,6 +22,8 @@ jobs:
       - name: Get dependencies
         run: |
           go get -v -t -d ./...
+      - name: Configure system for Elasticsearch
+        run: sudo sysctl -w vm.max_map_count=262144
       - name: Run integration tests with Elasticsearch `v7.16.1`
         run: make integration-tests ES_VERSION=7.16.1
   test-1:

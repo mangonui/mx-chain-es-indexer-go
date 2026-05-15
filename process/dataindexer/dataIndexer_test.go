@@ -163,7 +163,7 @@ func TestDataIndexer_RevertIndexedBlock(t *testing.T) {
 			countMap[1]++
 			return nil
 		},
-		RemoveTransactionsCalled: func(header coreData.HeaderHandler, body *dataBlock.Body) error {
+		RemoveTransactionsCalled: func(header coreData.HeaderHandler, body *dataBlock.Body, timestampMs uint64) error {
 			countMap[2]++
 			return nil
 		},

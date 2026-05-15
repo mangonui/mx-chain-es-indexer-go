@@ -64,3 +64,8 @@ func (tps *DBTransactionProcessorStub) SerializeDeploysData(_ []*data.ScDeployIn
 func (tps *DBTransactionProcessorStub) SerializeTokens(_ []*data.TokenInfo, _ *data.BufferSlice, _ string) error {
 	return nil
 }
+
+// IsInterfaceNil returns true if there is no value under the interface
+func (tps *DBTransactionProcessorStub) IsInterfaceNil() bool {
+	return tps == nil
+}

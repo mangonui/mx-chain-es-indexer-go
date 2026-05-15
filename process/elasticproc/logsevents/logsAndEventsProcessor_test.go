@@ -155,7 +155,7 @@ func TestLogsAndEventsProcessor_ExtractDataFromLogsAndPutInAltered(t *testing.T)
 	args.BalanceConverter = balanceConverter
 	proc, _ := NewLogsAndEventsProcessor(args)
 
-	resLogs := proc.ExtractDataFromLogs(logsAndEvents, res, core.MetachainShardId, 3, 1000000)
+	resLogs := proc.ExtractDataFromLogs(logsAndEvents, res, core.MetachainShardId, 3, 1000000, "", 0)
 	require.NotNil(t, resLogs.Tokens)
 	require.True(t, res.Transactions[0].HasOperations)
 	require.True(t, res.ScResults[0].HasOperations)
@@ -237,7 +237,7 @@ func TestLogsAndEventsProcessor_PrepareLogsForDB(t *testing.T) {
 			Hash:           "747848617368",
 			OriginalTxHash: "orignalHash",
 		},
-	}}, 0, 3, 1234000)
+	}}, 0, 3, 1234000, "", 0)
 
 	result.DBLogs[0].UUID = ""
 
@@ -294,7 +294,7 @@ func TestLogsAndEventsProcessor_ExtractDataFromLogsNFTBurn(t *testing.T) {
 	args.BalanceConverter = balanceConverter
 	proc, _ := NewLogsAndEventsProcessor(args)
 
-	resLogs := proc.ExtractDataFromLogs(logsAndEventsSlice, res, 2, 3, 1000000)
+	resLogs := proc.ExtractDataFromLogs(logsAndEventsSlice, res, 2, 3, 1000000, "", 0)
 	require.Equal(t, 1, resLogs.TokensSupply.Len())
 
 	tokensSupply := resLogs.TokensSupply.GetAll()
@@ -339,7 +339,7 @@ func TestPrepareLogsAndEvents_LogEvents(t *testing.T) {
 			Hash:           "747848617368",
 			OriginalTxHash: "originalHash",
 		},
-	}}, 1, 3, 1234000)
+	}}, 1, 3, 1234000, "", 0)
 
 	results.DBEvents[0].UUID = ""
 	results.DBEvents[1].UUID = ""

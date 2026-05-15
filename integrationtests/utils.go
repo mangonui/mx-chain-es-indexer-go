@@ -1,6 +1,8 @@
 package integrationtests
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -71,6 +73,27 @@ func CreateElasticProcessor(
 	return factory.CreateElasticProcessor(args)
 }
 
+// CreateElasticProcessorWithIndexes -
+func CreateElasticProcessorWithIndexes(
+	esClient elasticproc.DatabaseClientHandler,
+	enabledIndexes []string,
+) (dataindexer.ElasticProcessor, error) {
+	args := factory.ArgElasticProcessorFactory{
+		Marshalizer:              &mock.MarshalizerMock{},
+		Hasher:                   &mock.HasherMock{},
+		AddressPubkeyConverter:   pubKeyConverter,
+		ValidatorPubkeyConverter: mock.NewPubkeyConverterMock(32),
+		DBClient:                 esClient,
+		EnabledIndexes:           enabledIndexes,
+		Denomination:             18,
+		EnableEpochsConfig: config.EnableEpochsConfig{
+			RelayedTransactionsV1V2DisableEpoch: 1,
+		},
+		NumWritesInParallel: 1,
+	}
+
+	return factory.CreateElasticProcessor(args)
+}
 // nolint
 func readExpectedResult(path string) string {
 	jsonFile, _ := os.Open(path)
@@ -108,4 +131,20 @@ func getIndexMappings(index string) (string, error) {
 	}
 
 	return string(body), nil
+}
+
+// nolint
+func deleteDocumentByID(esClient elasticproc.DatabaseClientHandler, index string, id string) error {
+	body := map[string]interface{}{
+		"query": map[string]interface{}{
+			"ids": map[string]interface{}{
+				"values": []string{id},
+			},
+		},
+	}
+	encoded, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	return esClient.DoQueryRemove(context.Background(), index, bytes.NewBuffer(encoded))
 }

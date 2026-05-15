@@ -168,6 +168,9 @@ func (dp *delegatorsProc) getDelegatorFromClaimRewardsEvent(args *argsProcessEve
 }
 
 func bytesToBool(boolBytes []byte) bool {
+	if len(boolBytes) > 5 {
+		return false
+	}
 	b, err := strconv.ParseBool(string(boolBytes))
 	if err != nil {
 		log.Warn("delegatorsProc.bytesToBool", "error", esindexercore.SanitizeLogError(err))

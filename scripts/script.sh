@@ -4,7 +4,7 @@ PROMETHEUS_CONTAINER_NAME=prometheus_container
 GRAFANA_CONTAINER_NAME=grafana_container
 GRAFANA_VERSION=10.0.3
 PROMETHEUS_VERSION=v2.46.0
-INDICES_LIST=("rating" "transactions" "blocks" "validators" "miniblocks" "rounds" "accounts" "accountshistory" "receipts" "scresults" "accountsesdt" "accountsesdthistory" "epochinfo" "scdeploys" "tokens" "tags" "logs" "delegators" "operations" "esdts" "values" "events" "executionresults")
+INDICES_LIST=("rating" "transactions" "blocks" "validators" "miniblocks" "rounds" "accounts" "accountshistory" "receipts" "scresults" "accountsesdt" "accountsesdthistory" "epochinfo" "scdeploys" "tokens" "tags" "logs" "delegators" "operations" "esdts" "values" "events" "executionresults""drwa-denials" "drwa-identities" "drwa-holder-compliance" "drwa-attestations" "drwa-token-policies" "drwa-control-events")
 
 
 start() {
@@ -15,7 +15,7 @@ start() {
 
   docker pull docker.elastic.co/elasticsearch/elasticsearch:${ES_VERSION}
 
-  docker rm ${IMAGE_NAME} 2> /dev/null
+  docker rm -f ${IMAGE_NAME} 2> /dev/null
   docker run -d --name "${IMAGE_NAME}" -p 9200:9200  -p 9300:9300 \
    -e "discovery.type=single-node" -e "xpack.security.enabled=false" -e "ES_JAVA_OPTS=-Xms512m -Xmx512m" \
     docker.elastic.co/elasticsearch/elasticsearch:${ES_VERSION}
@@ -32,6 +32,7 @@ stop() {
 delete() {
    for str in ${INDICES_LIST[@]}; do
       curl -XDELETE http://localhost:9200/$str-000001
+      curl -XDELETE http://localhost:9200/$str
       curl -s -o /dev/null -w "%{http_code}" -X GET localhost:9200/_ilm/policy/$str-policy | grep -q 200 && curl -X DELETE localhost:9200/_ilm/policy/$str-policy
       echo
    done
@@ -52,7 +53,7 @@ start_open_search() {
 
   docker pull opensearchproject/opensearch:${OPEN_VERSION}
 
-  docker rm ${IMAGE_OPEN_SEARCH} 2> /dev/null
+  docker rm -f ${IMAGE_OPEN_SEARCH} 2> /dev/null
   docker run -d --name "${IMAGE_OPEN_SEARCH}" -p 9200:9200 -p 9600:9600 \
    -e "discovery.type=single-node" -e "plugins.security.disabled=true" -e "ES_JAVA_OPTS=-Xms512m -Xmx512m" \
    opensearchproject/opensearch:${OPEN_VERSION}
@@ -64,8 +65,8 @@ stop_open_search() {
 }
 
 start_prometheus_and_grafana() {
- docker rm ${PROMETHEUS_CONTAINER_NAME} 2> /dev/null
- docker rm ${GRAFANA_CONTAINER_NAME} 2> /dev/null
+ docker rm -f ${PROMETHEUS_CONTAINER_NAME} 2> /dev/null
+ docker rm -f ${GRAFANA_CONTAINER_NAME} 2> /dev/null
 
  PROMETHEUS_CONFIG_FOLDER=$(pwd)/prometheus
  docker run --network="host" --name "${PROMETHEUS_CONTAINER_NAME}" -d -p 9090:9090 -v "${PROMETHEUS_CONFIG_FOLDER}/prometheus.yml":/etc/prometheus/prometheus.yml prom/prometheus:${PROMETHEUS_VERSION}

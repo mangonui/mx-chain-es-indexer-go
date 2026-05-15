@@ -24,6 +24,7 @@ type ElasticProcessor interface {
 	SaveShardValidatorsPubKeys(validatorsPubKeys *outport.ValidatorsPubKeys) error
 	SaveAccounts(accounts *outport.Accounts) error
 	SetOutportConfig(cfg outport.OutportConfig) error
+	FinalizedBlock(finalizedBlock *outport.FinalizedBlock) error
 	IsInterfaceNil() bool
 }
 

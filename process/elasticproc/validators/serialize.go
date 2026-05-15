@@ -7,6 +7,7 @@ import (
 
 	"github.com/multiversx/mx-chain-core-go/data/outport"
 	"github.com/multiversx/mx-chain-es-indexer-go/data"
+	"github.com/multiversx/mx-chain-es-indexer-go/process/elasticproc/converters"
 )
 
 // SerializeValidatorsRating will serialize validators rating
@@ -15,7 +16,7 @@ func (vp *validatorsProcessor) SerializeValidatorsRating(ratingData *outport.Val
 
 	for _, ratingInfo := range ratingData.ValidatorsRatingInfo {
 		id := fmt.Sprintf("%s_%d", ratingInfo.PublicKey, ratingData.Epoch)
-		meta := []byte(fmt.Sprintf(`{ "index" : { "_id" : "%s" } }%s`, id, "\n"))
+		meta := []byte(fmt.Sprintf(`{ "index" : { "_id" : "%s" } }%s`, converters.JsonEscape(id), "\n"))
 
 		validatorRatingInfo := &data.ValidatorRatingInfo{
 			PublicKey: ratingInfo.PublicKey,

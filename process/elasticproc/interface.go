@@ -73,6 +73,7 @@ type DBTransactionsHandler interface {
 	SerializeTransactions(transactions []*data.Transaction, txHashStatusInfo map[string]*outport.StatusInfo, selfShardID uint32, buffSlice *data.BufferSlice, index string) error
 	SerializeTransactionsFeeData(txHashRefund map[string]*data.FeeData, buffSlice *data.BufferSlice, index string) error
 	SerializeScResults(scResults []*data.ScResult, buffSlice *data.BufferSlice, index string) error
+	IsInterfaceNil() bool
 }
 
 // DBMiniblocksHandler defines the actions that a miniblocks handler should do
@@ -102,6 +103,8 @@ type DBLogsAndEventsHandler interface {
 		shardID uint32,
 		numOfShards uint32,
 		timestampMs uint64,
+		blockHash string,
+		blockRound uint64,
 	) *data.PreparedLogsResults
 
 	SerializeEvents(events []*data.LogEvent, buffSlice *data.BufferSlice, index string) error
@@ -117,6 +120,14 @@ type DBLogsAndEventsHandler interface {
 		index string,
 	) error
 	PrepareDelegatorsQueryInCaseOfRevert(timestampMs uint64) *bytes.Buffer
+	FinalizeDRWARecords(shardID uint32, headerHash []byte) error
+	SerializeDRWADenials(records []*data.DrwaDenialRecord, buffSlice *data.BufferSlice, index string) error
+	SerializeDRWAIdentities(records []*data.DrwaIdentityRecord, buffSlice *data.BufferSlice, index string) error
+	SerializeDRWAHolderCompliance(records []*data.DrwaHolderComplianceRecord, buffSlice *data.BufferSlice, index string) error
+	SerializeDRWAAttestations(records []*data.DrwaAttestationRecord, buffSlice *data.BufferSlice, index string) error
+	SerializeDRWATokenPolicies(records []*data.DrwaTokenPolicyRecord, buffSlice *data.BufferSlice, index string) error
+	SerializeDRWAControlEvents(records []*data.DrwaControlEventRecord, buffSlice *data.BufferSlice, index string) error
+	IsInterfaceNil() bool
 }
 
 // OperationsHandler defines the actions that an operations' handler should do

@@ -62,7 +62,7 @@ func TestDRWAIdentityRecordFinalizedThenRemovedOnRevert(t *testing.T) {
 	require.NoError(t, err)
 
 	pool := &outport.TransactionPool{
-		Logs: []*outport.LogData{
+		Logs: []*transaction.LogData{
 			{
 				TxHash: txHashHex,
 				Log: &transaction.Log{
@@ -89,13 +89,18 @@ func TestDRWAIdentityRecordFinalizedThenRemovedOnRevert(t *testing.T) {
 		},
 	}
 
+	docID := txHashHex + "-" + subject + "-drwaIdentityRegistered-0"
+	// Clean up any stale document from a previous run so the test is isolated.
+	_ = deleteDocumentByID(esClient, indexerdata.DrwaIdentitiesIndex, docID)
+	t.Cleanup(func() {
+		_ = deleteDocumentByID(esClient, indexerdata.DrwaIdentitiesIndex, docID)
+	})
 	outportBlock := createOutportBlockWithHeader(body, header, pool, nil, testNumOfShards)
 	outportBlock.BlockData.HeaderHash = headerHash
 
 	err = esProc.SaveTransactions(outportBlock)
 	require.NoError(t, err)
 
-	docID := txHashHex + "-" + subject + "-drwaIdentityRegistered-0"
 	require.Eventually(t, func() bool {
 		found, source := fetchIndexedDocument(t, esClient, indexerdata.DrwaIdentitiesIndex, docID)
 		if !found {

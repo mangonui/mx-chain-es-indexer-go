@@ -49,4 +49,16 @@ const (
 	EventsIndex = "events"
 	// ExecutionResultsIndex is the Elasticsearch index for execution results
 	ExecutionResultsIndex = "executionresults"
+	// DrwaDenialsIndex is the Elasticsearch index for DRWA denials
+	DrwaDenialsIndex = "drwa-denials"
+	// DrwaIdentitiesIndex is the Elasticsearch index for DRWA identities
+	DrwaIdentitiesIndex = "drwa-identities"
+	// DrwaHolderComplianceIndex is the Elasticsearch index for DRWA holder compliance
+	DrwaHolderComplianceIndex = "drwa-holder-compliance"
+	// DrwaAttestationsIndex is the Elasticsearch index for DRWA attestations
+	DrwaAttestationsIndex = "drwa-attestations"
+	// DrwaTokenPoliciesIndex is the Elasticsearch index for DRWA token policies
+	DrwaTokenPoliciesIndex = "drwa-token-policies"
+	// DrwaControlEventsIndex is the Elasticsearch index for DRWA control events
+	DrwaControlEventsIndex = "drwa-control-events"
 )

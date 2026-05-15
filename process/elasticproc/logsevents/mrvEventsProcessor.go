@@ -28,7 +28,7 @@ type mrvEventsProcessor struct {
 type mrvAdditionalDataHandler interface {
 	GetAdditionalData() [][]byte
 }
-
+//nolint:unused
 func newMRVEventsProcessor() *mrvEventsProcessor {
 	return newMRVEventsProcessorWithAuthorizedEmitters(nil)
 }

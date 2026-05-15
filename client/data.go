@@ -4,7 +4,7 @@ const (
 	numOfErrorsToExtractBulkResponse = 5
 )
 
-var headerContentTypeJSON = []string{"application/json"}
+var headerContentTypeJSON = []string{"application/json"} //nolint:unused
 
 // Item defines the structure of an item from a bulk response
 type Item struct {

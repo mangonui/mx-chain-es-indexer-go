@@ -72,7 +72,7 @@ func (ws *webServer) StartHttpServer() error {
 
 	ws.registerRoutes(engine)
 
-	// ISSUE-017: the ES indexer API previously had ZERO timeouts. All four
+		// ISSUE-017: the ES indexer API previously had ZERO timeouts. All four
 	// (ReadHeaderTimeout / ReadTimeout / WriteTimeout / IdleTimeout) are
 	// added defensively. WriteTimeout is the most generous (60s) to allow
 	// long ES proxying responses; the others bound slow-loris vectors.

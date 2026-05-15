@@ -91,3 +91,9 @@ var ErrNilBlockContainerHandler = errors.New("nil bock container handler")
 
 // ErrNilMappingsHandler signals that a nil mappings handler has been provided
 var ErrNilMappingsHandler = errors.New("nil mappings handler")
+
+// ErrNilHeader signals that a nil header has been provided
+var ErrNilHeader = errors.New("nil header")
+
+// ErrNilFinalizedBlock signals that a nil finalized block has been provided
+var ErrNilFinalizedBlock = errors.New("nil finalized block")

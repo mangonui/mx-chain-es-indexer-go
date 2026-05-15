@@ -3,6 +3,8 @@ package transactions
 import (
 	"encoding/hex"
 	"math/big"
+	"fmt"
+	"runtime/debug"
 
 	"github.com/multiversx/mx-chain-core-go/core"
 	"github.com/multiversx/mx-chain-core-go/data/block"
@@ -72,6 +74,12 @@ func (tdp *txsDatabaseProcessor) PrepareTransactionsForDatabase(
 	pool *outport.TransactionPool,
 	isImportDB bool,
 ) *data.PreparedResults {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("PANIC recovered in PrepareTransactionsForDatabase: %v\n", r)
+			debug.PrintStack()
+		}
+	}()
 	err := checkPrepareTransactionForDatabaseArguments(pool)
 	if err != nil {
 		log.Warn("checkPrepareTransactionForDatabaseArguments", "error", err)
@@ -231,4 +239,10 @@ func getFeeInfo(txWithFeeInfo feeInfoHandler) *outport.FeeInfo {
 		Fee:            big.NewInt(0),
 		InitialPaidFee: big.NewInt(0),
 	}
+}
+
+
+// IsInterfaceNil returns true if there is no value under the interface
+func (tdp *txsDatabaseProcessor) IsInterfaceNil() bool {
+	return tdp == nil
 }

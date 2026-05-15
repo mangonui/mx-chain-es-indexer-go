@@ -100,7 +100,7 @@ func (tdp *txsDatabaseProcessor) SerializeTransactionsFeeData(txHashRefund map[s
 			`"lang": "painless",`+
 			`"params": {"fee": "%s", "gasUsed": %d, "feeNum": %g, "gasRefunded": %d}},`+
 			`"upsert": {}}`,
-			converters.FormatPainlessSource(codeToExecute), feeData.Fee, feeData.GasUsed, feeData.FeeNum, feeData.GasRefunded,
+			converters.FormatPainlessSource(codeToExecute), converters.JsonEscape(feeData.Fee), feeData.GasUsed, feeData.FeeNum, feeData.GasRefunded,
 		)
 
 		err := buffSlice.PutData(meta, []byte(serializedDataStr))
@@ -142,7 +142,7 @@ func (tdp *txsDatabaseProcessor) SerializeTransactions(
 
 func serializeTxHashStatus(buffSlice *data.BufferSlice, txHashStatusInfo map[string]*outport.StatusInfo, index string) error {
 	for txHash, statusInfo := range txHashStatusInfo {
-		metaData := []byte(fmt.Sprintf(`{"update":{ "_index":"%s","_id":"%s", "retry_on_conflict":3}}%s`, index, txHash, "\n"))
+		metaData := []byte(fmt.Sprintf(`{"update":{ "_index":"%s","_id":"%s", "retry_on_conflict":3}}%s`, index, converters.JsonEscape(txHash), "\n"))
 
 		newTx := &data.Transaction{
 			Status:         statusInfo.Status,

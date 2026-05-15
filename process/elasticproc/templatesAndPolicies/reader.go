@@ -72,6 +72,12 @@ func (tr *templatesAndPolicyReader) GetElasticTemplatesAndPolicies() (map[string
 	indexTemplates[indexer.ValuesIndex] = indices.Values.ToBuffer()
 	indexTemplates[indexer.EventsIndex] = indices.Events.ToBuffer()
 	indexTemplates[indexer.ExecutionResultsIndex] = indices.ExecutionResults.ToBuffer()
+	indexTemplates[indexer.DrwaDenialsIndex] = indices.DrwaDenials.ToBuffer()
+	indexTemplates[indexer.DrwaIdentitiesIndex] = indices.DrwaIdentities.ToBuffer()
+	indexTemplates[indexer.DrwaHolderComplianceIndex] = indices.DrwaHolderCompliance.ToBuffer()
+	indexTemplates[indexer.DrwaAttestationsIndex] = indices.DrwaAttestations.ToBuffer()
+	indexTemplates[indexer.DrwaTokenPoliciesIndex] = indices.DrwaTokenPolicies.ToBuffer()
+	indexTemplates[indexer.DrwaControlEventsIndex] = indices.DrwaControlEvents.ToBuffer()
 
 	return indexTemplates, indexPolicies, nil
 }

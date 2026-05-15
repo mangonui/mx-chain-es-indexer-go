@@ -17,6 +17,8 @@ import (
 var (
 	log               = logger.GetOrCreate("process/wsindexer")
 	errNilDataIndexer = errors.New("nil data indexer")
+
+	maxPayloadSize = 100 * 1024 * 1024
 )
 
 // ArgsIndexer holds all the components needed to create a new instance of indexer
@@ -73,6 +75,10 @@ func (i *indexer) initActionsMap() {
 func (i *indexer) ProcessPayload(payload []byte, topic string, version uint32) error {
 	if version != 1 {
 		log.Warn("received a payload with a different version", "version", version)
+	}
+
+	if len(payload) > maxPayloadSize {
+		return fmt.Errorf("payload too large: %d bytes, max allowed: %d", len(payload), maxPayloadSize)
 	}
 
 	payloadTypeAction, ok := i.actions[topic]

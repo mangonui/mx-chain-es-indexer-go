@@ -11,7 +11,7 @@ type ElasticProcessorStub struct {
 	SaveHeaderCalled                 func(outportBlockWithHeader *outport.OutportBlockWithHeader) error
 	RemoveHeaderCalled               func(header coreData.HeaderHandler) error
 	RemoveMiniblocksCalled           func(header coreData.HeaderHandler) error
-	RemoveTransactionsCalled         func(header coreData.HeaderHandler, body *block.Body) error
+	RemoveTransactionsCalled         func(header coreData.HeaderHandler, body *block.Body, timestampMs uint64) error
 	SaveMiniblocksCalled             func(outportBlockWithHeader *outport.OutportBlockWithHeader) error
 	SaveTransactionsCalled           func(outportBlockWithHeader *outport.OutportBlockWithHeader) error
 	SaveValidatorsRatingCalled       func(validatorsRating *outport.ValidatorsRating) error
@@ -55,10 +55,15 @@ func (eim *ElasticProcessorStub) RemoveMiniblocks(header coreData.HeaderHandler)
 }
 
 // RemoveTransactions -
-func (eim *ElasticProcessorStub) RemoveTransactions(header coreData.HeaderHandler, body *block.Body, _ uint64) error {
-	if eim.RemoveMiniblocksCalled != nil {
-		return eim.RemoveTransactionsCalled(header, body)
+func (eim *ElasticProcessorStub) RemoveTransactions(header coreData.HeaderHandler, body *block.Body, timestampMs uint64) error {
+	if eim.RemoveTransactionsCalled != nil {
+		return eim.RemoveTransactionsCalled(header, body, timestampMs)
 	}
+	return nil
+}
+
+// FinalizedBlock -
+func (eim *ElasticProcessorStub) FinalizedBlock(_ *outport.FinalizedBlock) error {
 	return nil
 }
 

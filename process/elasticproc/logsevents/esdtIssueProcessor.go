@@ -63,15 +63,25 @@ func (eip *esdtIssueProcessor) processEvent(args *argsProcessEvent) argOutputPro
 		}
 	}
 
+	const maxTopicLength = 256
+
 	// topics slice contains:
 	// topics[0] -- token identifier
 	// topics[1] -- token name
 	// topics[2] -- token ticker
 	// topics[3] -- token type
 	// topics[4] -- num decimals / new owner address in case of transferOwnershipFunc
-	if len(topics[0]) == 0 {
+	if len(topics[0]) == 0 || len(topics[0]) > maxTopicLength {
 		return argOutputProcessEvent{
 			processed: true,
+		}
+	}
+
+		for i := 1; i < 4; i++ {
+		if len(topics[i]) > maxTopicLength {
+			return argOutputProcessEvent{
+				processed: true,
+			}
 		}
 	}
 
@@ -107,6 +117,11 @@ func (eip *esdtIssueProcessor) processEvent(args *argsProcessEvent) argOutputPro
 	}
 
 	if identifierStr == transferOwnershipFunc && len(topics) >= numIssueLogTopics+1 {
+		if len(topics[4]) > maxTopicLength {
+			return argOutputProcessEvent{
+				processed: true,
+			}
+		}
 		newOwner := eip.pubkeyConverter.SilentEncode(topics[4], log)
 		tokenInfo.TransferOwnership = true
 		tokenInfo.CurrentOwner = newOwner

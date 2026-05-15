@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 
@@ -83,9 +84,24 @@ func (ec *elasticClient) SetWriteIndexTrue(alias string, providedIndex string) e
 		writeIndexFromCluster = providedIndex
 	}
 
-	body := fmt.Sprintf(`{"actions":[{"add":{"index":"%s","alias":"%s","is_write_index":true}}]}`, writeIndexFromCluster, alias)
+	bodyMap := map[string]interface{}{
+		"actions": []interface{}{
+			map[string]interface{}{
+				"add": map[string]interface{}{
+					"index":          writeIndexFromCluster,
+					"alias":          alias,
+					"is_write_index": true,
+				},
+			},
+		},
+	}
+	bodyBytes, err := json.Marshal(bodyMap)
+	if err != nil {
+		return err
+	}
+
 	res, err := ec.client.Indices.UpdateAliases(
-		bytes.NewBufferString(body),
+		bytes.NewReader(bodyBytes),
 	)
 	if err != nil {
 		return err
@@ -328,12 +344,19 @@ func (ec *elasticClient) getWriteIndex(alias string) (string, bool, error) {
 
 // UpdateByQuery will update all the documents that match the provided query from the provided index
 func (ec *elasticClient) UpdateByQuery(ctx context.Context, index string, buff *bytes.Buffer) error {
+
+	err := ec.doRefresh(index)
+	if err != nil {
+		log.Warn("elasticClient.doRefresh", "cannot do refresh", err)
+	}
 	res, err := ec.client.UpdateByQuery(
 		[]string{index},
 		ec.client.UpdateByQuery.WithBody(buff),
+		ec.client.UpdateByQuery.WithConflicts(esConflictsPolicy),
 		ec.client.UpdateByQuery.WithContext(ctx),
 	)
 	if err != nil {
+		log.Warn("elasticClient.UpdateByQuery", "cannot do update by query", core.SanitizeLogError(err))
 		return err
 	}
 

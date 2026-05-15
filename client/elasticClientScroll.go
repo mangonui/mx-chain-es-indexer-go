@@ -67,10 +67,11 @@ func (ec *elasticClient) DoScrollRequest(
 	}
 
 	scrollID := gjson.GetBytes(bodyBytes, "_scroll_id")
-	return ec.iterateScroll(scrollID.String(), handlerFunc)
+	return ec.iterateScroll(ctx, scrollID.String(), handlerFunc)
 }
 
 func (ec *elasticClient) iterateScroll(
+	ctx context.Context,
 	scrollID string,
 	handlerFunc func(responseBytes []byte) error,
 ) error {
@@ -78,14 +79,14 @@ func (ec *elasticClient) iterateScroll(
 		return nil
 	}
 	defer func() {
-		err := ec.clearScroll(scrollID)
+		err := ec.clearScroll(ctx, scrollID)
 		if err != nil {
 			log.Warn("cannot clear scroll", "error", err)
 		}
 	}()
 
 	for {
-		scrollBodyBytes, errScroll := ec.getScrollResponse(scrollID)
+		scrollBodyBytes, errScroll := ec.getScrollResponse(ctx, scrollID)
 		if errScroll != nil {
 			return errScroll
 		}
@@ -101,11 +102,12 @@ func (ec *elasticClient) iterateScroll(
 	}
 }
 
-func (ec *elasticClient) getScrollResponse(scrollID string) ([]byte, error) {
+func (ec *elasticClient) getScrollResponse(ctx context.Context, scrollID string) ([]byte, error) {
 	ec.countScroll++
 	res, err := ec.client.Scroll(
 		ec.client.Scroll.WithScrollID(scrollID),
 		ec.client.Scroll.WithScroll(2*time.Minute+time.Duration(ec.countScroll)*time.Millisecond),
+		ec.client.Scroll.WithContext(ctx),
 	)
 	if err != nil {
 		return nil, err
@@ -114,9 +116,10 @@ func (ec *elasticClient) getScrollResponse(scrollID string) ([]byte, error) {
 	return getBytesFromResponse(res)
 }
 
-func (ec *elasticClient) clearScroll(scrollID string) error {
+func (ec *elasticClient) clearScroll(ctx context.Context, scrollID string) error {
 	resp, err := ec.client.ClearScroll(
 		ec.client.ClearScroll.WithScrollID(scrollID),
+		ec.client.ClearScroll.WithContext(ctx),
 	)
 	if err != nil {
 		return err
